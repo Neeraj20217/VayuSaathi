@@ -559,8 +559,9 @@ Search for a city above to see nearby station readings, model estimates, and an 
               </h2>
               <div className="city-headline-row">
                 <span className="city-location-name">{city.name}</span>
+                {isDefaultCity && <span className="city-default-badge">Default city</span>}
                 <span className="city-location-region">
-                  {[city.locality, city.region, "India", isDefaultCity ? "Default city" : null].filter(Boolean).join(", ")}
+                  {[city.locality, city.region, "India"].filter(Boolean).join(", ")}
                 </span>
               </div>
             </div>
