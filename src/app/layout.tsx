@@ -2,13 +2,13 @@ import type { Metadata, Viewport } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "VayuSaathi — Urban Air Quality Assistant | PromptWars Challenge 06",
+  title: "VayuSaathi — Urban Air Quality Intelligence",
   description:
-    "Real air quality and personalized guidance for you and your family across Indian cities, powered by OpenAQ, Open-Meteo, and Google Gemini.",
+    "Grounded urban air quality observations and personalized household guidance across Indian cities, integrating OpenAQ ground stations, Copernicus CAMS models, and Google Gemini.",
 };
 
 export const viewport: Viewport = {
-  themeColor: "#059669",
+  themeColor: "#165A4A",
   width: "device-width",
   initialScale: 1,
 };
