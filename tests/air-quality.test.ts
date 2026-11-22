@@ -104,5 +104,24 @@ describe("air-quality integration failures", () => {
     const result = await getAirQuality(city, now);
     expect(result.measured).toMatchObject({ status: "partial", readings: [{ value: 22 }] });
   });
+
+  it("marks measured as no-data when no station locations exist within 25 km while preserving modeled readings", async () => {
+    vi.stubEnv("OPENAQ_API_KEY", "test-key");
+    vi.stubGlobal("fetch", vi.fn(async (url: URL) => {
+      if (url.hostname !== "api.openaq.org") return Response.json(model(15, 28));
+      return Response.json({ results: [] });
+    }));
+    const result = await getAirQuality(city, now);
+    expect(result.measured).toEqual({ status: "no-data", readings: [] });
+    expect(result.modeled.status).toBe("available");
+    expect(result.modeled.readings).toHaveLength(2);
+  });
+
+  it("handles model response when one pollutant is missing or null without crashing", () => {
+    const singlePollutant = model(35, null);
+    const parsed = parseModelReadings(singlePollutant, now);
+    expect(parsed).toHaveLength(1);
+    expect(parsed[0]).toMatchObject({ pollutant: "pm25", value: 35 });
+  });
 });
 
