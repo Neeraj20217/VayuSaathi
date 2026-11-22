@@ -92,7 +92,7 @@ export function recommendationContext(air: AirQuality, profile: Profile) {
 
 type Context = ReturnType<typeof recommendationContext>;
 
-export function parsePlan(text: string, context: Context): Plan {
+export function parsePlan(text: string, context: Context): Omit<Plan, "source"> {
   const ids = selectionSchema.parse(JSON.parse(text));
   const routine = context.choices.routine.find((option) => option.id === ids.routine);
   const indoor = context.choices.indoor.find((option) => option.id === ids.indoor);
@@ -120,6 +120,6 @@ export async function generatePlan(air: AirQuality, profile: Profile, apiKey: st
       maxOutputTokens: 512,
     },
   });
-  return parsePlan(response.text ?? "", context);
+  return { ...parsePlan(response.text ?? "", context), source: "gemini" };
 }
 

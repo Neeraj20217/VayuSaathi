@@ -86,6 +86,7 @@ describe("profile-specific choices", () => {
       choices: { indoor: expect.arrayContaining([{ id: "playSpace", title: expect.any(String), why: expect.any(String) }]) },
     });
     expect(request.config.responseJsonSchema.properties.travel.enum).toEqual(["combine"]);
+    expect(plan.source).toBe("gemini");
     expect(plan.actions.indoor.id).toBe("playSpace");
 
     generateContent.mockResolvedValueOnce({ text: JSON.stringify({ routine: "checkBefore", indoor: "playSpace", travel: "shared" }) });

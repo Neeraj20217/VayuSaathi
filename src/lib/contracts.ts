@@ -56,6 +56,7 @@ export interface Action {
 }
 
 export interface Plan {
+  source: "gemini" | "fallback";
   actions: { routine: Action; indoor: Action; travel: Action };
   basis: "recent-station" | "recent-model" | "limited";
 }
