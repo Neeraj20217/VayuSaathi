@@ -23,9 +23,7 @@ import {
   RotateCw,
   Search,
   ShieldCheck,
-  Sparkles,
   User,
-  Users,
   Wind,
   X,
 } from "lucide-react";
@@ -43,11 +41,11 @@ import {
 } from "@/lib/contracts";
 
 const popularCities = [
-  { name: "Delhi", query: "Delhi" },
-  { name: "Mumbai", query: "Mumbai" },
-  { name: "Kolkata", query: "Kolkata" },
-  { name: "Bengaluru", query: "Bengaluru" },
-  { name: "Hyderabad", query: "Hyderabad" },
+  { name: "Delhi", query: "Delhi", code: "DEL", region: "National Capital Territory of Delhi" },
+  { name: "Mumbai", query: "Mumbai", code: "BOM", region: "Maharashtra" },
+  { name: "Kolkata", query: "Kolkata", code: "CCU", region: "West Bengal" },
+  { name: "Bengaluru", query: "Bengaluru", code: "BLR", region: "Karnataka" },
+  { name: "Hyderabad", query: "Hyderabad", code: "HYD", region: "Telangana" },
 ];
 
 const startProfile: Profile = {
@@ -63,9 +61,9 @@ const date = new Intl.DateTimeFormat("en-IN", {
 });
 
 const tabs = [
-  { id: "recommendations", label: "Recommendations & Air Quality", icon: Sparkles },
-  { id: "about-data", label: "About the Data", icon: Info },
-  { id: "health-safety", label: "Health & Safety Guide", icon: ShieldCheck },
+  { id: "recommendations", label: "Air quality & plan", icon: Wind },
+  { id: "about-data", label: "About the data", icon: Info },
+  { id: "health-safety", label: "Health & safety guide", icon: ShieldCheck },
 ] as const;
 type Tab = (typeof tabs)[number]["id"];
 
@@ -96,6 +94,7 @@ export function Dashboard() {
   const [query, setQuery] = useState("");
   const [matches, setMatches] = useState<City[] | null>(null);
   const [city, setCity] = useState<City | null>(null);
+  const [isDefaultCity, setDefaultCity] = useState(false);
   const [searchStatus, setSearchStatus] = useState<"idle" | "loading">("idle");
   const [searchError, setSearchError] = useState("");
   const [profile, setProfile] = useState<Profile>(startProfile);
@@ -109,6 +108,7 @@ export function Dashboard() {
 
   function chooseCity(next: City) {
     setCity(next);
+    setDefaultCity(false);
     setActiveTab("recommendations");
   }
 
@@ -122,90 +122,90 @@ export function Dashboard() {
     const position = positions[event.key];
     if (typeof position !== "number") return;
     event.preventDefault();
-    const tab = tabs[position].id;
-    setActiveTab(tab);
-    document.getElementById("tab-" + tab)?.focus();
+    const next = tabs[position].id;
+    setActiveTab(next);
+    document.getElementById("tab-" + next)?.focus();
   }
 
-  // Initial default: load Delhi so the user immediately sees a live, functional experience
   useEffect(() => {
     const controller = new AbortController();
-    void (async () => {
-      try {
-        const result = await requestJson<{ cities: City[] }>("/api/cities?q=Delhi", { signal: controller.signal });
-        if (!controller.signal.aborted && !userChoseSearch.current && result.cities.length > 0) {
-          setCity(result.cities[0]);
+    requestJson<{ cities: City[] }>("/api/cities?q=Delhi", { signal: controller.signal })
+      .then(({ cities }) => {
+        if (!controller.signal.aborted && !userChoseSearch.current && cities[0]) {
+          setCity(cities[0]);
+          setDefaultCity(true);
         }
-      } catch {
-        // Ignore initial prefill failure
-      }
-    })();
+      })
+      .catch(() => {});
     return () => controller.abort();
   }, []);
 
-  async function search(term: string, notice = "") {
-    const trimmed = term.trim();
-    if (trimmed.length < 2) return;
+  async function search(searchQuery: string, notice?: string) {
+    const term = searchQuery.trim();
+    if (term.length < 2) return;
     userChoseSearch.current = true;
-    setQuery(trimmed);
-    setSearchError("");
-    setLocationNotice(notice);
-    setMatches(null);
+    setQuery(term);
     setSearchStatus("loading");
+    setSearchError("");
+    setMatches(null);
+    setLocationNotice(notice ?? "");
     try {
-      const result = await requestJson<{ cities: City[] }>("/api/cities?q=" + encodeURIComponent(trimmed));
-      setMatches(result.cities);
+      const result = await requestJson<{ cities: City[] }>("/api/cities?q=" + encodeURIComponent(term));
+      if (!result.cities.length) {
+        setMatches([]);
+        return;
+      }
       if (result.cities.length === 1) {
         chooseCity(result.cities[0]);
-        setMatches(null);
+      } else {
+        setMatches(result.cities);
       }
-    } catch (error) {
-      setSearchError(error instanceof Error ? error.message : "City search failed. Try again.");
+    } catch (err) {
+      setSearchError(err instanceof Error ? err.message : "City search failed. Try again.");
     } finally {
       setSearchStatus("idle");
     }
   }
 
   function handleUseLocation() {
-    setLocationNotice("");
     if (!navigator.geolocation) {
-      setLocationNotice("Geolocation is not supported by your browser.");
+      setLocationNotice("Geolocation is not supported by your browser. Please search by city name.");
       return;
     }
     userChoseSearch.current = true;
     setLocating(true);
+    setLocationNotice("");
     navigator.geolocation.getCurrentPosition(
       async (pos) => {
         setLocating(false);
-        // Look for a nearby supported metro using coordinates locally.
-        const coords = { lat: pos.coords.latitude, lon: pos.coords.longitude };
-        const knownCities = [
-          { name: "Delhi", lat: 28.65, lon: 77.22 },
-          { name: "Mumbai", lat: 19.07, lon: 72.87 },
+        const { latitude, longitude } = pos.coords;
+        const metros = [
+          { name: "Delhi", lat: 28.65, lon: 77.23 },
+          { name: "Mumbai", lat: 18.97, lon: 72.82 },
           { name: "Kolkata", lat: 22.57, lon: 88.36 },
-          { name: "Bengaluru", lat: 12.97, lon: 77.59 },
-          { name: "Hyderabad", lat: 17.38, lon: 78.48 },
+          { name: "Bengaluru", lat: 12.98, lon: 77.59 },
+          { name: "Hyderabad", lat: 17.38, lon: 78.47 },
         ];
-        let closest = knownCities[0];
+        let closest = metros[0];
         let minDist = Infinity;
-        for (const c of knownCities) {
+        for (const m of metros) {
           const radians = Math.PI / 180;
-          const latitude = (c.lat + coords.lat) / 2 * radians;
-          const d = 6371 * radians * Math.hypot(c.lat - coords.lat, (c.lon - coords.lon) * Math.cos(latitude));
+          const meanLatitude = (m.lat + latitude) / 2 * radians;
+          const d = 6371 * radians * Math.hypot(m.lat - latitude, (m.lon - longitude) * Math.cos(meanLatitude));
           if (d < minDist) {
             minDist = d;
-            closest = c;
+            closest = m;
           }
         }
         if (minDist > 50) {
-          setLocationNotice("No supported metro is near your location. Search for your city instead.");
+          setLocationNotice("No supported major metro is within 50 km. Search for your city instead.");
           return;
         }
-        await search(closest.name, "Nearby supported metro: " + closest.name + ". Results are for the selected city.");
+        await search(closest.name, "Nearby supported metro: " + closest.name + ". Readings are for the selected city.");
       },
       () => {
         setLocating(false);
-        setLocationNotice("Could not get your location. Search for your city instead.");
+        setLocationNotice("Could not access your location. Please type your city name.");
       },
       { timeout: 7000 }
     );
@@ -221,45 +221,31 @@ export function Dashboard() {
   }
 
   return (
-    <>
-      {/* Hero & Search Header */}
-      <section className="hero-section" aria-labelledby="hero-title">
-        <div className="hero-art-backdrop" aria-hidden="true" />
-        <div className="shell hero-content">
-          <div className="hero-badge">
-            <Sparkles size={14} aria-hidden="true" />
-            <span>GenAI Urban Air Quality Assistant</span>
-          </div>
-          <h1 id="hero-title" className="hero-title">
-            <span className="hero-title-line">Breathe Better,</span>{' '}
-            <span className="hero-title-line">Live Healthier</span>
-          </h1>
-          <p className="hero-subtitle">
-            Real air quality, personalized guidance for you and your family across Indian cities.
-          </p>
-
-          {/* Search Box */}
-          <div className="search-container">
+    <div className="telemetry-dashboard">
+      {/* Functional City Locator Strip */}
+      <section className="locator-section" aria-label="City search and location tools">
+        <div className="shell">
+          <div className="locator-box">
             <form
-              className="search-box"
+              className="locator-form"
               onSubmit={(e) => {
                 e.preventDefault();
                 if (!searching && !locating) void search(query);
               }}
             >
-              <div className="search-input-group">
+              <div className="search-field-group">
+                <MapPin size={18} className="search-lead-icon" aria-hidden="true" />
                 <label htmlFor="city-query" className="sr-only">
-                  Search Indian city
+                  Search Indian city or district
                 </label>
-                <MapPin size={22} className="search-icon-lead" aria-hidden="true" />
                 <input
                   id="city-query"
                   ref={searchInput}
                   aria-describedby={searchError ? "city-search-error" : undefined}
                   type="search"
-                  className="search-input-field"
+                  className="search-field-input"
                   value={query}
-                  placeholder="Search Indian city (e.g. Delhi, Mumbai, Bengaluru)"
+                  placeholder="Search city or district (e.g. Delhi, Mumbai, Bengaluru)"
                   required
                   minLength={2}
                   maxLength={80}
@@ -274,83 +260,91 @@ export function Dashboard() {
                 {query && (
                   <button
                     type="button"
-                    className="clear-btn"
+                    className="clear-search-btn"
                     onClick={clearSearch}
                     disabled={searching || locating}
                     aria-label="Clear city search query"
                   >
-                    <X size={16} aria-hidden="true" />
+                    <X size={15} aria-hidden="true" />
                   </button>
                 )}
               </div>
+
               <div className="search-actions-group">
                 <button
                   type="submit"
-                  className="search-submit-btn"
+                  className="btn-search-submit"
                   disabled={searching || locating || query.trim().length < 2}
                 >
-                  <Search size={18} aria-hidden="true" />
+                  <Search size={16} aria-hidden="true" />
                   <span>{searching ? "Searching…" : "Search"}</span>
                 </button>
                 <button
                   type="button"
-                  className="location-btn"
+                  className="btn-location"
                   onClick={handleUseLocation}
                   disabled={locating || searching}
                 >
-                  <LocateFixed size={18} aria-hidden="true" />
+                  <LocateFixed size={16} aria-hidden="true" />
                   <span>{locating ? "Locating…" : "Use my location"}</span>
                 </button>
               </div>
             </form>
 
-            {/* Quick-Select Shortcuts */}
-            <div className="quick-shortcuts" role="group" aria-label="Popular city quick searches">
-              <span className="quick-label">Popular:</span>
-              {popularCities.map((item) => (
-                <button
-                  key={item.name}
-                  type="button"
-                  className={`city-chip ${city?.name.toLowerCase() === item.name.toLowerCase() ? "active" : ""}`}
-                  disabled={searching || locating}
-                  onClick={() => void search(item.query)}
-                >
-                  {item.name}
-                </button>
-              ))}
+            {/* Quick Metro Telemetry Keys */}
+            <div className="metro-shortcuts-row" role="group" aria-label="Quick-select Indian metros">
+              <span className="metro-label">Popular metros:</span>
+              <div className="metro-keys-list">
+                {popularCities.map((item) => {
+                  const isCurrent = city?.name === item.name && city.region === item.region && !city.locality;
+                  return (
+                    <button
+                      key={item.name}
+                      type="button"
+                      className={`metro-key-btn ${isCurrent ? "active" : ""}`}
+                      disabled={searching || locating}
+                      onClick={() => void search(item.query)}
+                      title={`Search for ${item.name}`}
+                    >
+                      <span className="metro-code">{item.code}</span>
+                      <span className="metro-name">{item.name}</span>
+                    </button>
+                  );
+                })}
+              </div>
             </div>
 
-            {/* Location Notice / Feedback */}
+            {/* Location Feedback Notice */}
             {locationNotice && (
-              <p className="status-message" role="status" style={{ marginTop: "10px", fontSize: "0.85rem", color: "var(--primary-dark)" }}>
+              <p className="notice-feedback" role="status">
                 {locationNotice}
               </p>
             )}
 
-            {/* Search Error */}
+            {/* Search Error Alert */}
             {searchError && (
               <div id="city-search-error" className="error-alert" role="alert">
-                <AlertTriangle size={20} aria-hidden="true" />
+                <AlertTriangle size={18} aria-hidden="true" />
                 <div>
-                  <strong>City search failed</strong>
-                  <p>{searchError}</p>
+                  <strong>Search query issue:</strong> {searchError}
                 </div>
               </div>
             )}
 
-            {/* City Disambiguation Results */}
+            {/* Disambiguation Dropdown */}
             {matches && matches.length > 0 && (
-              <div className="search-results-card" role="region" aria-label="City search matches">
-                <p style={{ fontSize: "0.82rem", fontWeight: 700, color: "var(--muted)", margin: "4px 8px 8px" }}>
-                  Select your exact location from {matches.length} matching Indian locations:
-                </p>
-                <ul className="search-results-list">
+              <div className="disambiguation-panel" role="region" aria-label="City search matches">
+                <div className="disambiguation-header">
+                  Matching Indian settlements ({matches.length}):
+                </div>
+                <ul className="disambiguation-list">
                   {matches.map((item) => {
                     const isSelected = item.id === city?.id;
                     return (
-                      <li key={item.id} className="search-result-item">
+                      <li key={item.id} className="disambiguation-item">
                         <button
                           type="button"
+                          className={`disambiguation-btn ${isSelected ? "selected" : ""}`}
                           aria-pressed={isSelected}
                           onClick={() => {
                             chooseCity(item);
@@ -358,20 +352,16 @@ export function Dashboard() {
                             searchInput.current?.focus();
                           }}
                         >
-                          <div className="result-main">
-                            <MapPin size={18} className="result-pin" aria-hidden="true" />
-                            <div>
-                              <div className="result-name">{item.name}</div>
-                              <div className="result-location">
-                                {item.region ?? "State or territory unavailable"}
-                                {item.locality && " · " + item.locality}
-                              </div>
-                            </div>
+                          <div className="item-text-group">
+                            <span className="item-city-name">{item.name}</span>
+                            <span className="item-location-meta">
+                              {[item.locality, item.region, "India"].filter(Boolean).join(" · ")}
+                            </span>
                           </div>
                           {isSelected ? (
-                            <span className="result-badge">Selected ✓</span>
+                            <span className="selected-tag">Selected ✓</span>
                           ) : (
-                            <ArrowRight size={17} color="var(--muted)" aria-hidden="true" />
+                            <ArrowRight size={15} className="arrow-icon" aria-hidden="true" />
                           )}
                         </button>
                       </li>
@@ -380,18 +370,19 @@ export function Dashboard() {
                 </ul>
               </div>
             )}
+
             {matches && matches.length === 0 && (
-              <p className="status-message" role="status" style={{ marginTop: "10px", color: "var(--muted)" }}>
-                No matching Indian locations found. Try checking the spelling or search for a nearby district.
+              <p className="notice-feedback" role="status">
+                No matching Indian locations found. Try checking the spelling or query a nearby district.
               </p>
             )}
           </div>
         </div>
       </section>
 
-      {/* Main Dashboard Body */}
-      <div className="shell" style={{ marginTop: "28px" }}>
-        <div className="dashboard-tabs" role="tablist" aria-label="Dashboard views">
+      {/* Observational Tabs & Primary Content */}
+      <div className="shell content-body-wrap">
+        <div className="telemetry-tabs" role="tablist" aria-label="Dashboard views">
           {tabs.map(({ id, label, icon: Icon }, index) => (
             <button
               key={id}
@@ -401,26 +392,47 @@ export function Dashboard() {
               aria-selected={activeTab === id}
               aria-controls={"view-" + id}
               tabIndex={activeTab === id ? 0 : -1}
-              className={activeTab === id ? "tab-btn active" : "tab-btn"}
+              className={activeTab === id ? "tab-control active" : "tab-control"}
               onClick={() => setActiveTab(id)}
               onKeyDown={(event) => navigateTabs(event, index)}
             >
-              <Icon size={17} aria-hidden="true" />
+              <Icon size={16} aria-hidden="true" />
               <span>{label}</span>
             </button>
           ))}
         </div>
-        <div id="view-recommendations" role="tabpanel" aria-labelledby="tab-recommendations" tabIndex={0} hidden={activeTab !== "recommendations"}>
-          <CityAirView key={city?.id ?? "empty"} city={city} profile={profile} setProfile={setProfile} />
+
+        <div
+          id="view-recommendations"
+          role="tabpanel"
+          aria-labelledby="tab-recommendations"
+          tabIndex={0}
+          hidden={activeTab !== "recommendations"}
+        >
+          <CityAirView key={city?.id ?? "unselected"} city={city} isDefaultCity={isDefaultCity} profile={profile} setProfile={setProfile} />
         </div>
-        <div id="view-about-data" role="tabpanel" aria-labelledby="tab-about-data" tabIndex={0} hidden={activeTab !== "about-data"}>
+
+        <div
+          id="view-about-data"
+          role="tabpanel"
+          aria-labelledby="tab-about-data"
+          tabIndex={0}
+          hidden={activeTab !== "about-data"}
+        >
           <AboutDataView />
         </div>
-        <div id="view-health-safety" role="tabpanel" aria-labelledby="tab-health-safety" tabIndex={0} hidden={activeTab !== "health-safety"}>
+
+        <div
+          id="view-health-safety"
+          role="tabpanel"
+          aria-labelledby="tab-health-safety"
+          tabIndex={0}
+          hidden={activeTab !== "health-safety"}
+        >
           <HealthSafetyView />
         </div>
       </div>
-    </>
+    </div>
   );
 }
 
@@ -428,10 +440,12 @@ function CityAirView({
   city,
   profile,
   setProfile,
+  isDefaultCity,
 }: {
   city: City | null;
   profile: Profile;
   setProfile: React.Dispatch<React.SetStateAction<Profile>>;
+  isDefaultCity: boolean;
 }) {
   const [air, setAir] = useState<AirQuality | null>(null);
   const [airError, setAirError] = useState("");
@@ -444,7 +458,6 @@ function CityAirView({
   const cityId = city?.id;
   const loadingAir = !!city && !air && !airError;
 
-  // Fetch air quality whenever city changes or refresh is clicked
   useEffect(() => {
     if (!cityId) return;
     const controller = new AbortController();
@@ -456,7 +469,7 @@ function CityAirView({
       })
       .catch((err: Error) => {
         if (!controller.signal.aborted) {
-          setAirError(err.message || "Failed to load air quality data.");
+          setAirError(err.message || "Failed to retrieve air quality data.");
         }
       });
     return () => controller.abort();
@@ -513,7 +526,7 @@ function CityAirView({
       setAirError("");
       setPlan(result.plan);
     } catch (err) {
-      setPlanError(err instanceof Error ? err.message : "An AI plan could not be generated.");
+      setPlanError(err instanceof Error ? err.message : "An action plan could not be generated.");
     } finally {
       setGenerating(false);
     }
@@ -521,257 +534,247 @@ function CityAirView({
 
   if (!city) {
     return (
-      <div className="empty-state-box">
-        <Wind size={42} aria-hidden="true" color="var(--primary)" style={{ margin: "0 auto 12px" }} />
-        <h2 style={{ fontSize: "1.2rem", fontWeight: 750, color: "var(--ink)" }}>Choose a city to begin</h2>
-        <p>Search for any Indian city or territory to explore live station observations, atmospheric estimates, and tailored AI plans.</p>
+      <div className="city-empty-panel">
+        <div className="empty-inner">
+          <Wind size={36} className="empty-icon" aria-hidden="true" />
+          <h2 className="empty-heading">Select an Indian city or territory to begin</h2>
+          <p className="empty-copy">
+Search for a city above to see nearby station readings, model estimates, and an action plan for your household.
+          </p>
+
+        </div>
       </div>
     );
   }
 
   return (
     <>
-      <div className="dashboard-main-grid">
-        {/* City Status & Dual-Stream Panel (Left Column) */}
-        <section className="panel" aria-labelledby="city-readings-heading">
-        <div className="city-header-bar">
-          <div className="city-title-group">
-            <span className="city-pin-badge" aria-hidden="true">
-              <MapPin size={22} />
-            </span>
+      <div className="cockpit-grid">
+        {/* SECTION 1: Air quality near you (Left Column on Desktop, Top on Mobile) */}
+        <section className="panel-station-block" aria-labelledby="heading-air-quality">
+          <div className="section-title-bar">
             <div>
-              <h2 id="city-readings-heading" className="city-name">
-                {city.name}
+              <h2 id="heading-air-quality" className="panel-title">
+                Air quality near you
               </h2>
-              <div className="city-meta">
-                {[city.locality, city.region, "India"].filter(Boolean).join(", ")}
+              <div className="city-headline-row">
+                <span className="city-location-name">{city.name}</span>
+                {isDefaultCity && <span className="city-default-badge">Default city</span>}
+                <span className="city-location-region">
+                  {[city.locality, city.region, "India"].filter(Boolean).join(", ")}
+                </span>
               </div>
             </div>
-          </div>
 
-          <div className="city-actions">
             <button
               type="button"
-              className={`refresh-btn ${loadingAir ? "spinning" : ""}`}
+              className={`btn-refresh-readings ${loadingAir ? "is-spinning" : ""}`}
               onClick={refresh}
               disabled={loadingAir || generating}
               aria-label="Refresh air quality readings"
               title="Refresh readings"
             >
-              <RotateCw size={18} aria-hidden="true" />
+              <RotateCw size={16} aria-hidden="true" />
+              <span className="refresh-label">Refresh</span>
             </button>
           </div>
-        </div>
 
-        {/* Air Quality Error Alert */}
-        {airError && (
-          <div className="error-alert" role="alert">
-            <AlertTriangle size={20} aria-hidden="true" />
-            <div>
-              <h3>Could not load air quality data</h3>
-              <p>{airError}</p>
-              <button type="button" className="retry-btn" onClick={refresh} disabled={generating}>
-                <RotateCw size={14} aria-hidden="true" /> Retry
-              </button>
-            </div>
-          </div>
-        )}
-
-        {/* Loading Skeleton */}
-        {loadingAir && !air && (
-          <div className="loading-state-card" role="status">
-            <div className="spinner" aria-hidden="true" />
-            <p style={{ fontWeight: 700, color: "var(--ink)", margin: 0 }}>
-              Fetching latest air quality for {city.name}…
-            </p>
-            <p style={{ fontSize: "0.84rem", color: "var(--muted)", margin: "4px 0 0" }}>
-              Checking nearby OpenAQ ground stations and Open-Meteo CAMS models.
-            </p>
-          </div>
-        )}
-
-        {/* Air Streams Grid */}
-        {air && (
-          <div className="air-streams-grid">
-            {/* Stream A: Station Observations (OpenAQ) */}
-            <StreamCard kind="measured" data={air.measured} />
-
-            {/* Stream B: Modeled Estimates (Open-Meteo) */}
-            <StreamCard kind="modeled" data={air.modeled} />
-          </div>
-        )}
-
-        {/* Scientific Footnote */}
-        <p style={{ fontSize: "0.8rem", color: "var(--muted)", margin: "14px 0 0", lineHeight: 1.45 }}>
-          <strong>Transparency Notice:</strong> Measurements are displayed in µg/m³. Station observations reflect ground-level physical monitors within 25 km. Modeled values represent Copernicus Atmosphere Monitoring Service (CAMS) regional estimates.
-        </p>
-      </section>
-
-      {/* Interactive Household Personalization Section */}
-      <section className="household-section" aria-labelledby="household-heading">
-        <div className="section-head">
-          <span className="section-icon-lead">
-            <Users size={20} aria-hidden="true" />
-          </span>
-          <div>
-            <h2 id="household-heading" className="section-title">
-              Personalized Plan for Your Household
-            </h2>
-            <p className="section-desc">
-              Select who is in your home so Gemini can tailor your daily schedule, indoor precautions, and commute.
-            </p>
-          </div>
-        </div>
-
-        <form onSubmit={handleCreatePlan}>
-          {/* Member Selection Cards */}
-          <fieldset aria-describedby={planError && !profile.members.length ? "plan-error" : undefined} style={{ border: "none", padding: 0, margin: 0 }}>
-            <legend className="field-label" style={{ marginBottom: "12px" }}>
-              Who lives in your household? (Select all that apply)
-            </legend>
-            <div className="member-cards-grid">
-              <MemberCard
-                id="children"
-                label="Children"
-                sub="Under 14 years"
-                icon={Baby}
-                selected={profile.members.includes("Children")}
-                onToggle={() => toggleMember("Children")}
-                disabled={generating}
-              />
-              <MemberCard
-                id="older-adults"
-                label="Older Adults"
-                sub="Ages 60+"
-                icon={User}
-                selected={profile.members.includes("Older adults")}
-                onToggle={() => toggleMember("Older adults")}
-                disabled={generating}
-              />
-              <MemberCard
-                id="working-adults"
-                label="Working Adults"
-                sub="Office / field commute"
-                icon={Briefcase}
-                selected={profile.members.includes("Working adults")}
-                onToggle={() => toggleMember("Working adults")}
-                disabled={generating}
-              />
-              <MemberCard
-                id="students"
-                label="Students"
-                sub="School / college travel"
-                icon={GraduationCap}
-                selected={profile.members.includes("Students")}
-                onToggle={() => toggleMember("Students")}
-                disabled={generating}
-              />
-            </div>
-          </fieldset>
-
-          {/* Commute and Priority Selects */}
-          <div className="profile-selects-row">
-            <div className="field-group">
-              <label htmlFor="commute-select" className="field-label">
-                <Car size={16} aria-hidden="true" />
-                <span>Typical commute</span>
-              </label>
-              <select
-                id="commute-select"
-                className="select-control"
-                value={profile.commute}
-                disabled={generating}
-                onChange={(e) => updateCommute(e.target.value as Profile["commute"])}
-              >
-                {commutes.map((c) => (
-                  <option key={c} value={c}>
-                    {c}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div className="field-group">
-              <label htmlFor="priority-select" className="field-label">
-                <Compass size={16} aria-hidden="true" />
-                <span>What matters today?</span>
-              </label>
-              <select
-                id="priority-select"
-                className="select-control"
-                value={profile.priority}
-                disabled={generating}
-                onChange={(e) => updatePriority(e.target.value as Profile["priority"])}
-              >
-                {priorities.map((p) => (
-                  <option key={p} value={p}>
-                    {p}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
-
-          {/* Active Profile Summary Badges */}
-          <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap", marginBottom: "16px" }}>
-            <span style={{ fontSize: "0.82rem", fontWeight: 700, color: "var(--muted)" }}>Current Focus:</span>
-            {profile.members.map((m) => (
-              <span key={m} className="genai-badge" style={{ fontSize: "0.76rem" }}>
-                ✓ {m}
-              </span>
-            ))}
-            <span className="genai-badge" style={{ fontSize: "0.76rem", background: "#f5f3ff", borderColor: "#ddd6fe", color: "#6d28d9" }}>
-              Commute: {profile.commute}
-            </span>
-            <span className="genai-badge" style={{ fontSize: "0.76rem", background: "#fef3c7", borderColor: "#fde68a", color: "#b45309" }}>
-              Priority: {profile.priority}
-            </span>
-          </div>
-
-          {/* Generate Button & Error Feedback */}
-          <div className="plan-generate-row">
-            <button
-              type="submit"
-              className="plan-cta-btn"
-              disabled={generating || loadingAir}
-              aria-describedby="plan-input-note"
-            >
-              <Sparkles size={18} aria-hidden="true" />
-              <span>{generating ? "Crafting Your Plan with Gemini…" : "Create My Personalized Plan"}</span>
-            </button>
-            <p id="plan-input-note" style={{ fontSize: "0.82rem", color: "var(--muted)", margin: 0 }}>
-              Household choices and available recent outdoor readings are sent to Gemini when you request a plan.
-            </p>
-          </div>
-
-          {planError && (
-            <div id="plan-error" className="error-alert" role="alert" style={{ marginTop: "16px" }}>
-              <AlertTriangle size={20} aria-hidden="true" />
+          {/* Error Message */}
+          {airError && (
+            <div className="error-alert" role="alert">
+              <AlertTriangle size={18} aria-hidden="true" />
               <div>
-                <h3>Could not generate plan</h3>
-                <p>{planError}</p>
+                <strong>Could not load air quality data:</strong> {airError}
+                <div>
+                  <button type="button" className="btn-retry-inline" onClick={refresh} disabled={generating}>
+                    <RotateCw size={13} aria-hidden="true" /> Retry
+                  </button>
+                </div>
               </div>
             </div>
           )}
-        </form>
-      </section>
+
+          {/* Loading Shimmer */}
+          {loadingAir && !air && (
+            <div className="telemetry-loading-card" role="status">
+              <div className="telemetry-spinner" aria-hidden="true" />
+              <div className="loading-text-main">Loading outdoor readings for {city.name}…</div>
+              <div className="loading-text-sub">Checking OpenAQ station readings and Open-Meteo model estimates</div>
+            </div>
+          )}
+
+          {/* Telemetry Streams */}
+          {air && (
+            <div className="telemetry-streams-container">
+              {/* Nearby station readings (OpenAQ) */}
+              <StreamCard kind="measured" data={air.measured} />
+
+              {/* Model estimates (Open-Meteo / Copernicus CAMS) */}
+              <StreamCard kind="modeled" data={air.modeled} />
+            </div>
+          )}
+
+          {/* Transparency Disclaimer */}
+          <div className="telemetry-scientific-note">
+            <strong>Transparency Notice:</strong> Station readings come from outdoor monitors within 25 km of the city centre. Conditions can vary across the city. CAMS provides separate outdoor estimates on a global grid of about 45 km over India.
+          </div>
+        </section>
+
+        {/* SECTION 2: Your household (Right Column on Desktop) */}
+        <section className="panel-household-block" aria-labelledby="heading-household">
+          <div className="section-title-bar">
+            <div>
+              <h2 id="heading-household" className="panel-title">
+                Your household
+              </h2>
+              <p className="panel-subtitle">
+                Choose who is in your household and how you travel.
+              </p>
+            </div>
+          </div>
+
+          <form onSubmit={handleCreatePlan} className="household-form">
+            <fieldset
+              aria-describedby={planError && !profile.members.length ? "plan-error-msg" : undefined}
+              className="household-fieldset"
+            >
+              <legend className="fieldset-legend">
+                Household members (select all that apply):
+              </legend>
+
+              <div className="member-selection-grid">
+                <MemberCard
+                  id="children"
+                  label="Children"
+                    icon={Baby}
+                  selected={profile.members.includes("Children")}
+                  onToggle={() => toggleMember("Children")}
+                  disabled={generating}
+                />
+                <MemberCard
+                  id="older-adults"
+                  label="Older adults"
+                    icon={User}
+                  selected={profile.members.includes("Older adults")}
+                  onToggle={() => toggleMember("Older adults")}
+                  disabled={generating}
+                />
+                <MemberCard
+                  id="working-adults"
+                  label="Working adults"
+                    icon={Briefcase}
+                  selected={profile.members.includes("Working adults")}
+                  onToggle={() => toggleMember("Working adults")}
+                  disabled={generating}
+                />
+                <MemberCard
+                  id="students"
+                  label="Students"
+                    icon={GraduationCap}
+                  selected={profile.members.includes("Students")}
+                  onToggle={() => toggleMember("Students")}
+                  disabled={generating}
+                />
+              </div>
+            </fieldset>
+
+            {/* Commute and Priority Controls */}
+            <div className="household-dropdowns-grid">
+              <div className="form-field-group">
+                <label htmlFor="commute-select" className="dropdown-label">
+                  <Car size={15} aria-hidden="true" />
+                  <span>Typical commute</span>
+                </label>
+                <select
+                  id="commute-select"
+                  className="dropdown-select-control"
+                  value={profile.commute}
+                  disabled={generating}
+                  onChange={(e) => updateCommute(e.target.value as Profile["commute"])}
+                >
+                  {commutes.map((c) => (
+                    <option key={c} value={c}>
+                      {c}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="form-field-group">
+                <label htmlFor="priority-select" className="dropdown-label">
+                  <Compass size={15} aria-hidden="true" />
+                  <span>What matters today?</span>
+                </label>
+                <select
+                  id="priority-select"
+                  className="dropdown-select-control"
+                  value={profile.priority}
+                  disabled={generating}
+                  onChange={(e) => updatePriority(e.target.value as Profile["priority"])}
+                >
+                  {priorities.map((p) => (
+                    <option key={p} value={p}>
+                      {p}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            {/* Active Profile Summary */}
+            <div className="active-summary-strip" aria-label="Selected household configuration">
+              <span className="summary-title">Selected profile:</span>
+              {profile.members.length > 0 ? (
+                profile.members.map((m) => (
+                  <span key={m} className="summary-tag">
+                    {m}
+                  </span>
+                ))
+              ) : (
+                <span className="summary-empty-warning">No members selected (select at least one)</span>
+              )}
+              <span className="summary-tag muted">Commute: {profile.commute}</span>
+              <span className="summary-tag muted">Priority: {profile.priority}</span>
+            </div>
+
+            {/* CTA Generate Button */}
+            <div className="cta-container">
+              <button
+                type="submit"
+                className="btn-create-plan"
+                disabled={generating || loadingAir || profile.members.length === 0}
+                aria-describedby="plan-privacy-note"
+              >
+                <span>{generating ? "Crafting plan with Gemini…" : "Generate action plan"}</span>
+              </button>
+              <p id="plan-privacy-note" className="privacy-micro-copy">
+                Household choices and available recent outdoor readings are sent to Google Gemini only when you request a plan.
+              </p>
+            </div>
+
+            {planError && (
+              <div id="plan-error-msg" className="error-alert" role="alert" style={{ marginTop: "14px" }}>
+                <AlertTriangle size={18} aria-hidden="true" />
+                <div>
+                  <strong>Action plan error:</strong> {planError}
+                </div>
+              </div>
+            )}
+          </form>
+        </section>
       </div>
 
-      {/* Plan Generating Shimmer */}
+      {/* Plan Generating State */}
       {generating && (
-        <div className="loading-state-card" role="status">
-          <div className="spinner" aria-hidden="true" />
-          <p style={{ fontSize: "1.1rem", fontWeight: 800, color: "var(--ink)", margin: "0 0 6px" }}>
-            Creating your plan…
-          </p>
-          <p style={{ fontSize: "0.85rem", color: "var(--muted)", margin: 0, maxWidth: "52ch" }}>
-Gemini is choosing vetted actions for {city.name} based on your household and available recent data.
-          </p>
+        <div className="telemetry-loading-card" role="status" style={{ marginTop: "20px" }}>
+          <div className="telemetry-spinner" aria-hidden="true" />
+          <div className="loading-text-main">Synthesizing personalized action plan for {city.name}…</div>
+          <div className="loading-text-sub">Gemini is selecting vetted actions using your household choices and available recent outdoor readings.</div>
         </div>
       )}
 
-      {/* Generated Recommendations View */}
-      <p className="sr-only" role="status">{plan ? "Your personalized plan is ready below." : ""}</p>
+      {/* SECTION 3: Your action plan (Full Width) */}
+      <p className="sr-only" role="status">{plan ? "Your personalized action plan is displayed below." : ""}</p>
       {plan && <PlanView plan={plan} />}
     </>
   );
@@ -780,7 +783,6 @@ Gemini is choosing vetted actions for {city.name} based on your household and av
 function MemberCard({
   id,
   label,
-  sub,
   icon: Icon,
   selected,
   onToggle,
@@ -788,7 +790,6 @@ function MemberCard({
 }: {
   id: string;
   label: string;
-  sub: string;
   icon: React.ComponentType<{ size: number; ariaHidden?: boolean; className?: string }>;
   selected: boolean;
   onToggle: () => void;
@@ -801,21 +802,23 @@ function MemberCard({
       role="checkbox"
       aria-checked={selected}
       aria-labelledby={`member-${id}-label`}
-      aria-describedby={`member-${id}-description`}
-      className={`member-toggle-card ${selected ? "selected" : ""}`}
+      className={`member-card-button ${selected ? "is-selected" : ""}`}
       onClick={onToggle}
       disabled={disabled}
     >
-      {selected && (
-        <span className="member-check-badge" aria-hidden="true">
-          <Check size={13} strokeWidth={3} />
-        </span>
-      )}
-      <div className="member-avatar-wrap">
-        <Icon size={24} aria-hidden="true" />
+      <div className="member-check-box" aria-hidden="true">
+        {selected && <Check size={12} strokeWidth={3} />}
       </div>
-      <span id={`member-${id}-label`} className="member-label">{label}</span>
-      <span id={`member-${id}-description`} className="member-sub">{sub}</span>
+      <div className="member-card-content">
+        <div className="member-icon-wrap" aria-hidden="true">
+          <Icon size={18} />
+        </div>
+        <div>
+          <span id={`member-${id}-label`} className="member-card-name">
+            {label}
+          </span>
+        </div>
+      </div>
     </button>
   );
 }
@@ -827,7 +830,7 @@ function StreamCard({ kind, data }: { kind: "measured" | "modeled"; data: DataSo
   const statusMessages: Record<DataSource["status"], string> = {
     available: "",
     "no-data": isMeasured
-      ? "No usable station readings found within 25 km of the city center."
+      ? "No usable station readings found within 25 km of the city centre."
       : "No usable modeled estimates were returned for this location.",
     unavailable: isMeasured
       ? "OpenAQ API is temporarily unavailable."
@@ -839,108 +842,115 @@ function StreamCard({ kind, data }: { kind: "measured" | "modeled"; data: DataSo
   const message = statusMessages[data.status];
 
   return (
-    <div className={`stream-card ${isMeasured ? "station" : "modeled"}`}>
-      <div>
-        <div className="stream-header">
-          <div className="stream-title">
-            <Icon size={18} aria-hidden="true" />
-            <span>{isMeasured ? "Monitoring station observation" : "Modeled estimate"}</span>
-          </div>
-          <span className={`stream-provider-pill ${isMeasured ? "openaq" : "openmeteo"}`}>
-            {isMeasured ? "OpenAQ" : "Open-Meteo"}
-          </span>
+    <article className={`telemetry-stream-card ${isMeasured ? "stream-station" : "stream-model"}`}>
+      <div className="stream-card-masthead">
+        <div className="stream-badge-group">
+          <Icon size={16} className="stream-type-icon" aria-hidden="true" />
+          <h3 className="stream-card-title">
+            {isMeasured ? "Nearby station readings" : "Model estimates"}
+          </h3>
         </div>
-
-        {message && (
-          <p style={{ fontSize: "0.84rem", color: "var(--muted)", margin: "0 0 12px", background: "#f0f5f2", padding: "8px 12px", borderRadius: "8px" }}>
-            {message}
-          </p>
-        )}
-
-        {/* Readings Tile Grid */}
-        <div className="readings-row">
-          {pollutants.map((pollutant) => {
-            const reading = data.readings.find((r) => r.pollutant === pollutant);
-            return (
-              <div key={pollutant} className="reading-tile">
-                <div className="reading-pollutant">{pollutantNames[pollutant]}</div>
-                {reading ? (
-                  <>
-                    <div className="reading-value-wrap">
-                      <span className="reading-value">{reading.value}</span>
-                      <span className="reading-unit">{reading.unit}</span>
-                    </div>
-                    <div style={{ marginTop: "6px", display: "flex", alignItems: "center", gap: "6px" }}>
-                      <span className={`freshness-pill ${reading.freshness}`}>
-                        {states[reading.freshness]}
-                      </span>
-                    </div>
-                    {isMeasured && (
-                      <div className="reading-provenance">
-                        <time dateTime={reading.timestamp}>Observed: {date.format(new Date(reading.timestamp))} IST</time>
-                        {reading.station && <span>{reading.station.name} · {reading.station.provider} · {reading.station.distanceKm.toFixed(1)} km from center</span>}
-                      </div>
-                    )}
-                  </>
-                ) : (
-                  <div style={{ fontSize: "0.95rem", color: "var(--muted-light)", fontWeight: 600, padding: "8px 0" }}>
-                    Unavailable
-                  </div>
-                )}
-              </div>
-            );
-          })}
-        </div>
+        <span className={`stream-source-tag ${isMeasured ? "tag-openaq" : "tag-openmeteo"}`}>
+          {isMeasured ? "OpenAQ Ground Station" : "Open-Meteo / Copernicus CAMS"}
+        </span>
       </div>
 
-      {/* Footer Attribution */}
-      <div className="stream-footer">
+      {message && (
+        <p className="stream-notice-box">
+          {message}
+        </p>
+      )}
+
+      {/* Numerical Telemetry Values */}
+      <div className="readings-grid">
+        {pollutants.map((pollutant) => {
+          const reading = data.readings.find((r) => r.pollutant === pollutant);
+          return (
+            <div key={pollutant} className="pollutant-reading-cell">
+              <div className="pollutant-label">{pollutantNames[pollutant]}</div>
+              {reading ? (
+                <>
+                  <div className="pollutant-number-wrap">
+                    <span className="pollutant-number">{reading.value}</span>
+                    <span className="pollutant-unit">{reading.unit}</span>
+                  </div>
+                  <div className="pollutant-freshness-row">
+                    <span className={`freshness-badge ${reading.freshness}`}>
+                      {states[reading.freshness]}
+                    </span>
+                  </div>
+                  {isMeasured && (
+                    <div className="pollutant-provenance-meta">
+                      <time dateTime={reading.timestamp}>
+                        Observed: {date.format(new Date(reading.timestamp))} IST
+                      </time>
+                      {reading.station && (
+                        <div className="station-meta-line">
+                          {reading.station.name} · {reading.station.provider} · {reading.station.distanceKm.toFixed(1)} km from centre
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </>
+              ) : (
+                <div className="pollutant-unavailable">
+                  Unavailable
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Stream Provenance Footer */}
+      <div className="stream-card-footer">
         {isMeasured ? (
-          <div className="stream-meta-line">Ground observations via OpenAQ API v3</div>
+          <div className="footer-meta-text">
+            Physical ground observation via OpenAQ API v3 within 25 km radius
+          </div>
         ) : (
-          <>
-            <div className="stream-meta-line">
-              <Layers3 size={14} color="var(--accent)" aria-hidden="true" />
-              <span>
-                <strong>CAMS (Copernicus)</strong> · Global atmospheric model · ~45 km grid
-              </span>
+          <div className="model-footer-meta">
+            <div className="model-disclaimer-text">
+              Copernicus Atmosphere Monitoring Service (CAMS) global atmospheric model estimates via Open-Meteo. These are regional numerical simulations, not ground monitor measurements.
             </div>
             {data.readings[0]?.timestamp && (
-              <div className="stream-meta-line">
+              <div className="model-time-stamp">
                 <Clock size={13} aria-hidden="true" />
                 <time dateTime={data.readings[0].timestamp}>
                   Model validity: {date.format(new Date(data.readings[0].timestamp))} IST
                 </time>
               </div>
             )}
-          </>
+          </div>
         )}
       </div>
-    </div>
+    </article>
   );
 }
 
 function PlanView({ plan }: { plan: Plan }) {
   const fromGemini = plan.source === "gemini";
+  const isFallback = plan.source === "fallback";
   const grounded = fromGemini && plan.basis !== "limited";
+
   const cards = [
     {
-      category: "Daily Routine",
-      tag: "Outdoor & Timing",
+      category: "Daily routine",
+      tag: "Outdoor activity",
       icon: Activity,
       type: "routine" as const,
       action: plan.actions.routine,
     },
     {
-      category: "At Home",
-      tag: "Indoor Air Safety",
+      category: "Indoor air",
+      tag: "Indoor environment",
       icon: House,
       type: "indoor" as const,
       action: plan.actions.indoor,
     },
     {
-      category: "Travel & Commute",
-      tag: "Low-Emission Travel",
+      category: "Travel and commute",
+      tag: "Lower-emission travel",
       icon: Bus,
       type: "travel" as const,
       action: plan.actions.travel,
@@ -948,136 +958,125 @@ function PlanView({ plan }: { plan: Plan }) {
   ];
 
   return (
-    <section className="recommendations-panel" aria-labelledby="plan-result-heading">
-      <div className="section-head">
-        <span className="section-icon-lead" style={{ background: "#ecfdf5", color: "var(--primary)" }}>
-          <Sparkles size={20} aria-hidden="true" />
-        </span>
+    <section className="panel-action-plan-block" aria-labelledby="heading-action-plan">
+      <div className="section-title-bar">
         <div>
-          <h2 id="plan-result-heading" className="section-title">
-            Your Personalized Air Quality Plan
+          <h2 id="heading-action-plan" className="panel-title">
+            Your action plan
           </h2>
-          <p className="section-desc">{fromGemini ? "Actions selected by Google Gemini" : "General household guidance"}</p>
+          <p className="panel-subtitle">
+            {fromGemini ? "Actions selected by Google Gemini" : "General household guidance"}
+          </p>
         </div>
       </div>
 
-      {/* Basis Callout */}
-      <div className="plan-basis-callout">
-        <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-          <Info size={17} aria-hidden="true" style={{ flexShrink: 0 }} />
-          <span>{fromGemini ? planBasis[plan.basis] : plan.source === "fallback" ? "Fallback guidance. Gemini did not select these actions." : "Plan source is unavailable."}</span>
-        </div>
-        {fromGemini && (
-          <span className="genai-badge" style={{ fontSize: "0.76rem" }}>
-            <Sparkles size={12} aria-hidden="true" />
-            <span>Live Gemini Inference</span>
+      {/* Provenance Grounding Banner */}
+      <div className="plan-provenance-banner">
+        <div className="provenance-info-row">
+          <Info size={16} aria-hidden="true" className="provenance-info-icon" />
+          <span className="provenance-basis-text">
+            {fromGemini
+              ? planBasis[plan.basis]
+              : isFallback ? "Fallback guidance. Gemini did not select these actions." : "Plan source is unavailable."}
           </span>
-        )}
+        </div>
+        {fromGemini && <span className="plan-provenance-tag gemini-tag">Live Gemini Inference</span>}
       </div>
 
-      {/* Action Cards */}
+      {/* Recommendation Action Cards Grid */}
       <div className="plan-cards-grid">
         {cards.map(({ category, tag, icon: Icon, type, action }) => (
-          <article key={category} className={`plan-card ${type}`}>
-            <div>
-              <div className="plan-card-header">
-                <div className="plan-card-icon">
-                  <Icon size={18} aria-hidden="true" />
-                </div>
-                <div>
-                  <h3 style={{ fontSize: "0.98rem", fontWeight: 800, margin: 0, color: "var(--ink)" }}>
-                    {category}
-                  </h3>
-                  <span className="plan-card-tag">{tag}{grounded ? " · Gemini Grounded" : ""}</span>
-                </div>
+          <article key={category} className={`action-card-item card-${type}`}>
+            <div className="card-top-head">
+              <div className="category-meta-wrap">
+                <Icon size={17} className="category-icon" aria-hidden="true" />
+                <h3 className="category-title">{category}</h3>
               </div>
-              <h4 className="plan-action-title">{action.title}</h4>
+              <span className="category-tag">{tag}{grounded ? " · Gemini Grounded" : ""}</span>
             </div>
-            <div className="plan-action-why">
-              <strong style={{ display: "block", color: "var(--ink)", marginBottom: "3px", fontSize: "0.8rem", textTransform: "uppercase", letterSpacing: "0.02em" }}>
-                Why this matters:
-              </strong>
-              {action.why}
+
+            <h4 className="action-main-title">{action.title}</h4>
+
+            <div className="action-why-block">
+              <span className="why-label">Why this matters:</span>
+              <p className="why-explanation">{action.why}</p>
             </div>
           </article>
         ))}
       </div>
 
-      {/* Disclaimer */}
-      <p style={{ fontSize: "0.8rem", color: "var(--muted)", margin: 0, lineHeight: 1.45 }}>
-        {fromGemini && "Gemini selects from vetted actions using your household choices and available recent outdoor data. "}Indoor advice is general. A separate indoor sensor is needed to measure indoor air quality.
-      </p>
+      {/* Scientific Disclaimer */}
+      <div className="plan-sensor-disclaimer">
+        Indoor advice is general. A separate indoor sensor is needed to measure indoor air quality.
+      </div>
     </section>
   );
 }
 
 function AboutDataView() {
   return (
-    <section className="edu-content-block" aria-labelledby="about-data-heading">
-      <div className="section-head">
-        <span className="section-icon-lead">
-          <Info size={20} aria-hidden="true" />
-        </span>
+    <section className="edu-view-block" aria-labelledby="heading-about-data">
+      <div className="section-title-bar">
         <div>
-          <h2 id="about-data-heading" className="section-title">
-            Understanding VayuSaathi Data Streams
+          <h2 id="heading-about-data" className="panel-title">
+            About the data
           </h2>
-          <p className="section-desc">
-            How we combine physical station monitors and chemical transport models with honest provenance.
+          <p className="panel-subtitle">
+            Scientific data sources, physical monitoring radii, and atmospheric composition models.
           </p>
         </div>
       </div>
 
-      <div className="edu-grid">
-        <div className="edu-card">
-          <h3>
-            <Radio size={18} color="var(--primary)" aria-hidden="true" />
-            Monitoring Station Observation (OpenAQ)
+      <div className="edu-cards-grid">
+        <article className="edu-article-card station-border">
+          <h3 className="edu-card-title">
+            <Radio size={16} className="edu-icon station" aria-hidden="true" />
+            Nearby station readings (OpenAQ API v3)
           </h3>
-          <p>
-            Observations come from physical outdoor monitors listed by OpenAQ. Each reading identifies its station and data provider.
+          <p className="edu-card-text">
+            Observations originate from ground-level physical monitors indexed by the OpenAQ global repository. Each station observation reflects physical measurement instruments operated by governmental and academic networks (such as CPCB, DPCC, IITM, and state pollution control boards).
           </p>
-          <ul>
-            <li><strong>Coverage:</strong> Scans within a 25 km radius of the selected city center.</li>
-            <li><strong>Measurement:</strong> Available PM2.5 and PM10 concentrations reported by the station.</li>
-            <li><strong>Freshness:</strong> Recent (≤ 3 hrs), Delayed (≤ 24 hrs), or Stale (&gt; 24 hrs).</li>
+          <ul className="edu-bullet-list">
+            <li><strong>Monitoring Radius:</strong> Searches for ground stations within 25 km of the selected city centre.</li>
+            <li><strong>Parameters:</strong> Physical PM2.5 and PM10 concentrations reported directly by the monitor in µg/m³.</li>
+            <li><strong>Data Freshness:</strong> Categorized as Recent (≤ 3 hours), Delayed (over 3 and up to 24 hours), or Stale (&gt; 24 hours).</li>
           </ul>
-        </div>
+        </article>
 
-        <div className="edu-card">
-          <h3>
-            <Layers3 size={18} color="var(--accent)" aria-hidden="true" />
-            Modeled Atmospheric Estimate (Open-Meteo)
+        <article className="edu-article-card model-border">
+          <h3 className="edu-card-title">
+            <Layers3 size={16} className="edu-icon model" aria-hidden="true" />
+            Model estimates (Open-Meteo / Copernicus CAMS)
           </h3>
-          <p>
-            VayuSaathi shows Copernicus Atmosphere Monitoring Service (CAMS) estimates via Open-Meteo alongside any available station readings.
+          <p className="edu-card-text">
+            VayuSaathi displays CAMS estimates from Open-Meteo alongside any available station readings.
           </p>
-          <ul>
-            <li><strong>Spatial Resolution:</strong> About 45 km for the global atmospheric composition model used in India.</li>
-            <li><strong>Mechanism:</strong> Satellite data assimilation with weather and emissions forecasting.</li>
-            <li><strong>Role:</strong> Provides continuous regional continuity without replacing ground-truth sensors.</li>
+          <ul className="edu-bullet-list">
+            <li><strong>Spatial Resolution:</strong> Approximately 45 km horizontal grid resolution for the global atmospheric composition model over India.</li>
+            <li><strong>Methodology:</strong> Integrates satellite observations with numerical chemical transport forecasting and meteorological models.</li>
+            <li><strong>Scientific Role:</strong> Fills critical geographical coverage gaps across smaller Indian towns without misrepresenting modeled values as physical station readings.</li>
           </ul>
-        </div>
+        </article>
 
-        <div className="edu-card">
-          <h3>
-            <Clock size={18} color="var(--primary)" aria-hidden="true" />
-            Timestamps & Timezones
+        <article className="edu-article-card">
+          <h3 className="edu-card-title">
+            <Clock size={16} className="edu-icon" aria-hidden="true" />
+            Timestamps and Indian Standard Time (IST)
           </h3>
-          <p>
-            All times are converted to Indian Standard Time (IST, UTC+05:30). Both observation time and model run validity time are explicitly preserved.
+          <p className="edu-card-text">
+            Times are shown in Indian Standard Time (IST). Observation time is the timestamp reported for the station reading. Model validity time is when the estimate applies.
           </p>
-        </div>
+        </article>
 
-        <div className="edu-card">
-          <h3>
-            <ShieldCheck size={18} color="var(--primary)" aria-hidden="true" />
-            Scientific Accuracy & No Synthetic AQI
+        <article className="edu-article-card">
+          <h3 className="edu-card-title">
+            <ShieldCheck size={16} className="edu-icon" aria-hidden="true" />
+            Concentrations and AQI
           </h3>
-          <p>
-            VayuSaathi displays genuine pollutant concentrations in µg/m³. Each reading shows its source and time. This dashboard displays concentrations rather than an AQI score.
+          <p className="edu-card-text">
+            VayuSaathi shows outdoor particle concentrations in µg/m³. A displayed reading does not establish an AQI category or a safe exposure level.
           </p>
-        </div>
+        </article>
       </div>
     </section>
   );
@@ -1085,79 +1084,71 @@ function AboutDataView() {
 
 function HealthSafetyView() {
   return (
-    <section className="edu-content-block" aria-labelledby="health-safety-heading">
-      <div className="section-head">
-        <span className="section-icon-lead">
-          <ShieldCheck size={20} aria-hidden="true" />
-        </span>
+    <section className="edu-view-block" aria-labelledby="heading-health-safety">
+      <div className="section-title-bar">
         <div>
-          <h2 id="health-safety-heading" className="section-title">
-            Health & Safety Guidelines for Indian Cities
+          <h2 id="heading-health-safety" className="panel-title">
+            Health & safety guide
           </h2>
-          <p className="section-desc">
-            Evidence-based precautions for navigating severe winter smog and urban particulate pollution.
+          <p className="panel-subtitle">
+            General guidance on particles in outdoor and indoor air.
           </p>
         </div>
       </div>
 
-      <div className="edu-grid">
-        <div className="edu-card">
-          <h3>
-            <Wind size={18} color="var(--primary)" aria-hidden="true" />
-            PM2.5 vs PM10 Particulate Matter
+      <div className="edu-cards-grid">
+        <article className="edu-article-card">
+          <h3 className="edu-card-title">
+            <Wind size={16} className="edu-icon" aria-hidden="true" />
+            What PM2.5 and PM10 mean
           </h3>
-          <p>
-            <strong>PM2.5</strong> describes particles 2.5 micrometers across or smaller. <strong>PM10</strong> includes particles up to 10 micrometers, including PM2.5.
+          <p className="edu-card-text">
+            <strong>PM2.5</strong> describes fine particles about 2.5 micrometers across or smaller. <strong>PM10</strong> includes particles up to 10 micrometers, including PM2.5. Fine particles can reach deep into the lungs.
           </p>
-          <ul>
-            <li>Sources include vehicular exhaust, construction dust, biomass burning, and road dust.</li>
-            <li>Check local conditions and advisories before planning outdoor activity.</li>
+          <ul className="edu-bullet-list">
+            <li>Sources include vehicle exhaust, dust from construction and roads, and smoke.</li>
+            <li>Check local advisories before planning outdoor activities.</li>
           </ul>
-        </div>
+        </article>
 
-        <div className="edu-card">
-          <h3>
-            <Users size={18} color="var(--warning)" aria-hidden="true" />
-            Sensitive & Vulnerable Groups
+        <article className="edu-article-card">
+          <h3 className="edu-card-title">
+            <User size={16} className="edu-icon" aria-hidden="true" />
+            Sensitive and vulnerable groups
           </h3>
-          <p>
-            Particulate pollution presents elevated risks for specific household demographics:
+          <p className="edu-card-text">
+            Children, older adults, and people with heart or lung conditions may be more affected by particle pollution. Follow local public-health advisories.
           </p>
-          <ul>
-            <li><strong>Children:</strong> Faster respiratory rate and developing lung tissues.</li>
-            <li><strong>Older Adults:</strong> Heightened vulnerability to cardiovascular and respiratory stress.</li>
-            <li><strong>Outdoor Commuters:</strong> Direct exposure to concentrated roadside exhaust.</li>
-          </ul>
-        </div>
+        </article>
 
-        <div className="edu-card">
-          <h3>
-            <House size={18} color="var(--primary)" aria-hidden="true" />
-            Indoor Air Quality Protection
+        <article className="edu-article-card">
+          <h3 className="edu-card-title">
+            <House size={16} className="edu-icon" aria-hidden="true" />
+            Indoor air quality protection
           </h3>
-          <p>
-            Outdoor particles can enter through windows and doors. Indoor levels also depend on cooking, other indoor sources, ventilation and filtration.
+          <p className="edu-card-text">
+            Outdoor particles can enter buildings. Cooking and other indoor sources can also affect indoor air.
           </p>
-          <ul>
+          <ul className="edu-bullet-list">
             <li>Use a kitchen exhaust fan that vents outdoors if available.</li>
-            <li>Avoid indoor incense (agarbatti), mosquito coils, and indoor smoking during high pollution days.</li>
-            <li>Use HEPA air purifiers in sleeping rooms if available.</li>
+            <li>Reduce avoidable indoor smoke from sources such as incense, candles, and tobacco.</li>
+            <li>If you use a portable air cleaner, follow the manufacturer’s guidance and replace its filter as directed.</li>
           </ul>
-        </div>
+        </article>
 
-        <div className="edu-card">
-          <h3>
-            <Footprints size={18} color="var(--primary)" aria-hidden="true" />
-            Low-Emission Travel Habits
+        <article className="edu-article-card">
+          <h3 className="edu-card-title">
+            <Footprints size={16} className="edu-icon" aria-hidden="true" />
+            Low-emission travel and commute habits
           </h3>
-          <p>
-            Combining errands or sharing a ride can reduce separate vehicle trips.
+          <p className="edu-card-text">
+            Combining errands or sharing a ride can reduce the number of separate vehicle trips.
           </p>
-          <ul>
-            <li>Check local air-quality advisories when planning outdoor travel.</li>
+          <ul className="edu-bullet-list">
+            <li>Check local advisories when planning outdoor travel.</li>
             <li>Switch off the engine when safely parked and waiting.</li>
           </ul>
-        </div>
+        </article>
       </div>
     </section>
   );
