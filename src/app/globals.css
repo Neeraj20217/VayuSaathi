@@ -232,6 +232,10 @@ button:disabled {
   margin-bottom: 16px;
 }
 
+.hero-title-line {
+  display: block;
+}
+
 .hero-title {
   font-size: clamp(2.2rem, 5.2vw, 3.8rem);
   font-weight: 850;
@@ -273,6 +277,21 @@ button:disabled {
 .search-box:focus-within {
   border-color: var(--primary);
   box-shadow: 0 12px 32px -4px rgba(5, 150, 105, 0.2), 0 0 0 3px rgba(5, 150, 105, 0.15);
+}
+
+.search-input-group {
+  display: flex;
+  align-items: center;
+  flex: 1;
+  min-width: 0;
+  gap: 8px;
+}
+
+.search-actions-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
 }
 
 .search-icon-lead {
@@ -1304,6 +1323,12 @@ button:disabled {
   .shell {
     width: calc(100% - 24px);
   }
+  .hero-title {
+    font-size: clamp(1.75rem, 6.2vw, 2.5rem);
+    line-height: 1.15;
+    word-break: normal;
+    overflow-wrap: break-word;
+  }
   .dashboard-tabs {
     overflow-x: auto;
     flex-wrap: nowrap;
@@ -1329,31 +1354,46 @@ button:disabled {
     grid-template-columns: 1fr;
   }
   .search-box {
-    flex-wrap: wrap;
+    flex-direction: column;
+    align-items: stretch;
     border-radius: var(--radius-lg);
-    padding: 8px;
+    padding: 8px 10px;
+    gap: 8px;
+  }
+  .search-input-group {
+    display: flex;
+    align-items: center;
+    width: 100%;
+    min-height: 42px;
     gap: 8px;
   }
   .search-input-field {
     width: 100%;
-    order: 1;
-    min-height: 42px;
+    font-size: 0.95rem;
+  }
+  .search-actions-group {
+    display: flex;
+    align-items: center;
+    width: 100%;
+    gap: 8px;
   }
   .search-submit-btn {
-    flex: 1 1 100px;
+    flex: 0 0 105px;
     min-width: 0;
-    order: 2;
+    order: unset;
     justify-content: center;
     padding: 9px 12px;
     font-size: 0.88rem;
+    white-space: nowrap;
   }
   .location-btn {
-    flex: 1 1 125px;
+    flex: 1 1 auto;
     min-width: 0;
-    order: 3;
+    order: unset;
     justify-content: center;
     padding: 9px 10px;
     font-size: 0.82rem;
+    white-space: nowrap;
   }
   .city-header-bar {
     flex-direction: column;
@@ -1368,6 +1408,10 @@ button:disabled {
 @media (max-width: 380px) {
   .shell {
     width: calc(100% - 18px);
+  }
+  .hero-title {
+    font-size: clamp(1.5rem, 6vw, 1.85rem);
+    line-height: 1.18;
   }
   .panel, .household-section, .recommendations-panel {
     padding: 14px 12px;
@@ -1400,9 +1444,18 @@ button:disabled {
   .brand-title {
     font-size: 1.1rem;
   }
-  .search-submit-btn, .location-btn {
-    font-size: 0.8rem;
+  .search-submit-btn {
+    flex: 0 0 95px;
+    font-size: 0.82rem;
     padding: 8px 8px;
+  }
+  .location-btn {
+    flex: 1 1 auto;
+    font-size: 0.8rem;
+    padding: 8px 6px;
+  }
+  .location-btn span {
+    font-size: 0.78rem;
   }
 }
 

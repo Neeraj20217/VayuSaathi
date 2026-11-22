@@ -231,7 +231,8 @@ export function Dashboard() {
             <span>GenAI Urban Air Quality Assistant</span>
           </div>
           <h1 id="hero-title" className="hero-title">
-            Breathe Better, Live Healthier
+            <span className="hero-title-line">Breathe Better,</span>{' '}
+            <span className="hero-title-line">Live Healthier</span>
           </h1>
           <p className="hero-subtitle">
             Real air quality, personalized guidance for you and your family across Indian cities.
@@ -246,57 +247,61 @@ export function Dashboard() {
                 if (!searching && !locating) void search(query);
               }}
             >
-              <label htmlFor="city-query" className="sr-only">
-                Search Indian city
-              </label>
-              <MapPin size={22} className="search-icon-lead" aria-hidden="true" />
-              <input
-                id="city-query"
-                ref={searchInput}
-                aria-describedby={searchError ? "city-search-error" : undefined}
-                type="search"
-                className="search-input-field"
-                value={query}
-                placeholder="Search Indian city (e.g. Delhi, Mumbai, Bengaluru)"
-                required
-                minLength={2}
-                maxLength={80}
-                readOnly={searching || locating}
-                onChange={(e) => {
-                  setQuery(e.target.value);
-                  setSearchError("");
-                  setMatches(null);
-                  setLocationNotice("");
-                }}
-              />
-              {query && (
+              <div className="search-input-group">
+                <label htmlFor="city-query" className="sr-only">
+                  Search Indian city
+                </label>
+                <MapPin size={22} className="search-icon-lead" aria-hidden="true" />
+                <input
+                  id="city-query"
+                  ref={searchInput}
+                  aria-describedby={searchError ? "city-search-error" : undefined}
+                  type="search"
+                  className="search-input-field"
+                  value={query}
+                  placeholder="Search Indian city (e.g. Delhi, Mumbai, Bengaluru)"
+                  required
+                  minLength={2}
+                  maxLength={80}
+                  readOnly={searching || locating}
+                  onChange={(e) => {
+                    setQuery(e.target.value);
+                    setSearchError("");
+                    setMatches(null);
+                    setLocationNotice("");
+                  }}
+                />
+                {query && (
+                  <button
+                    type="button"
+                    className="clear-btn"
+                    onClick={clearSearch}
+                    disabled={searching || locating}
+                    aria-label="Clear city search query"
+                  >
+                    <X size={16} aria-hidden="true" />
+                  </button>
+                )}
+              </div>
+              <div className="search-actions-group">
+                <button
+                  type="submit"
+                  className="search-submit-btn"
+                  disabled={searching || locating || query.trim().length < 2}
+                >
+                  <Search size={18} aria-hidden="true" />
+                  <span>{searching ? "Searching…" : "Search"}</span>
+                </button>
                 <button
                   type="button"
-                  className="clear-btn"
-                  onClick={clearSearch}
-                  disabled={searching || locating}
-                  aria-label="Clear city search query"
+                  className="location-btn"
+                  onClick={handleUseLocation}
+                  disabled={locating || searching}
                 >
-                  <X size={16} aria-hidden="true" />
+                  <LocateFixed size={18} aria-hidden="true" />
+                  <span>{locating ? "Locating…" : "Use my location"}</span>
                 </button>
-              )}
-              <button
-                type="submit"
-                className="search-submit-btn"
-                disabled={searching || locating || query.trim().length < 2}
-              >
-                <Search size={18} aria-hidden="true" />
-                <span>{searching ? "Searching…" : "Search"}</span>
-              </button>
-              <button
-                type="button"
-                className="location-btn"
-                onClick={handleUseLocation}
-                disabled={locating || searching}
-              >
-                <LocateFixed size={18} aria-hidden="true" />
-                <span>{locating ? "Locating…" : "Use my location"}</span>
-              </button>
+              </div>
             </form>
 
             {/* Quick-Select Shortcuts */}
