@@ -22,9 +22,19 @@ Evidence timestamps in the supplied transcript: submission 4:04â€“5:14 and 7:25â
 - [x] Ground Gemini's validated structured choices in server-fetched data. Supply qualitative impact explanations and route secrets through server-only modules.
 - [x] Provide an environment template, README, architecture, decisions and AI prompt log.
 - [x] Verified authenticated OpenAQ and Gemini calls in Delhi and observed profile differences in live output. See the AI prompt log for the two profiles and results.
-- [ ] Create and verify the public URL, GitHub repository, LinkedIn post and demo recording before submission.
+
+## Submission readiness
+
+- [x] Application implemented and reviewed.
+- [x] [Public GitHub repository](https://github.com/Neeraj20217/VayuSaathi).
+- [x] [Public Vercel production deployment](https://vayusaathi.vercel.app).
+- [x] OpenAQ station observations and Open-Meteo CAMS estimates verified in production.
+- [x] Gemini recommendation integration verified in production.
+- [x] Production QA recorded and mobile headline and search-layout corrections deployed in `f146546`. See the [QA and release record](PRODUCTION_QA_REPORT.md).
+- [ ] Record the demo of the live application.
+- [ ] Publish the mandatory LinkedIn technical post.
+- [ ] Submit the application URL, repository, demo recording, and LinkedIn post to PromptWars.
 
 ## Proposed enhancements
 
 The brief suggests morning/afternoon/evening planning, multilingual support, location permission, action tracking, saved profiles and evaluator sample profiles. These are optional. The Phase 1 prompt adds responsive UI, the fixed technology stack and local-only work without prior publication or spending approval.
-

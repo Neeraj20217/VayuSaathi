@@ -1,13 +1,21 @@
 # VayuSaathi — Production QA & Verification Report
 
-**Production Deployment URL:** [https://vayusaathi.vercel.app](https://vayusaathi.vercel.app)  
-**GitHub Repository:** [https://github.com/Neeraj20217/VayuSaathi](https://github.com/Neeraj20217/VayuSaathi)  
-**Deployed Production Commit ID:** `84234d405e09e5f391f879193aa3050425c0c4c2`  
-**Target Fix Branch:** `fix/mobile-production-qa`  
-**Test Date & Time:** 22 November 2026, 12:15 PM IST  
-**Assessment Outcome:** **PASSED WITH MINOR MOBILE FIX IMPLEMENTED ON `fix/mobile-production-qa`** (Ready for merge and redeployment after approval).
+## Current release status
 
----
+| Item | Verified status |
+| --- | --- |
+| Production URL | [vayusaathi.vercel.app](https://vayusaathi.vercel.app) |
+| GitHub repository | [Neeraj20217/VayuSaathi](https://github.com/Neeraj20217/VayuSaathi) |
+| Mobile-fix application revision | [`f146546e297de2508face1edba0d44284c5291d9`](https://github.com/Neeraj20217/VayuSaathi/commit/f146546e297de2508face1edba0d44284c5291d9) |
+| Release verification | On 22 November 2026, GitHub `main` and the Vercel production domain were verified at `f146546`. Vercel reported Ready. |
+
+The mobile headline and search-layout fixes are committed, pushed, and deployed. The matrix, headers, measurements, and inference records below are historical evidence from the initial QA run. The documentation review verified release metadata without repeating those tests or live provider calls.
+
+## Initial production QA record
+
+- **Application revision** [`84234d405e09e5f391f879193aa3050425c0c4c2`](https://github.com/Neeraj20217/VayuSaathi/commit/84234d405e09e5f391f879193aa3050425c0c4c2)
+- **Test date and time** 22 November 2026, 12:15 PM IST
+- **Initial result** The functional checks passed and the layout review identified two narrow-screen issues. The fix was developed on `fix/mobile-production-qa` and shipped in `f146546`.
 
 ## 1. Test Summary Matrix
 
@@ -28,11 +36,11 @@
 | **1.13** | **Recommendations: Request Security** | **PASS** | GET rejected (HTTP 405). Non-JSON rejected (HTTP 415). Missing members rejected (HTTP 400). Oversized body (>2048 bytes) rejected (HTTP 400). |
 | **1.14** | **Edge Firewall & Rate Limiting** | **PASS** | Burst requests triggered Vercel Edge Firewall Rate Limit (HTTP 429 Too Many Requests, Edge ID `bom1::...`), verifying quota protection. Spaced user requests pass cleanly. |
 | **1.15** | **Desktop Viewports (1920px & 1366px)** | **PASS** | Side-by-side cockpit (.dashboard-main-grid) renders cleanly. No awkward whitespace or clipped elements. |
-| **1.16** | **Mobile Viewports (360px, 390px, 430px)** | **RESOLVED** | On production commit `84234d4`, hero title "Breathe Better, Live Healthier" clipped "Healthier" on widths $\le 390\text{px}$, and search buttons squeezed in a single row without wrapping. Resolved on branch `fix/mobile-production-qa` via fluid responsive clamp and 2-row wrapped mobile search layout. |
+| **1.16** | **Mobile Viewports (360px, 390px, 430px)** | **RESOLVED** | On production commit `84234d4`, hero title "Breathe Better, Live Healthier" clipped "Healthier" on widths $\le 390\text{px}$, and search buttons squeezed in a single row without wrapping. Fixed in `f146546` with responsive headline sizing and a two-row search layout. |
 
 ---
 
-## 2. Live Production Deployment Evidence
+## 2. Initial Deployment Evidence
 
 ### A. Public Headers & Edge Routing
 ```http
@@ -77,17 +85,20 @@ cache-control: public, max-age=0, must-revalidate
 
 ## 3. Visual Layout & Responsive Inspection
 
-### Captured Layout Screenshots
-- **Desktop (1920x1080):** [screenshot_desktop_1920.png](file:///C:/Users/NeerajK/.gemini/antigravity/brain/34267e06-d3d5-4ac2-88b6-e12e9406b065/screenshot_desktop_1920.png)
+### Original screenshot inventory
+
+The filenames identify local artifacts from the initial QA run. The screenshots are not bundled in this repository.
+
+- **Desktop (1920x1080):** `screenshot_desktop_1920.png`
   - Balanced side-by-side cockpit (.dashboard-main-grid)
   - Generous padding, no excessive whitespace margins
-- **Desktop (1366x768):** [screenshot_desktop_1366.png](file:///C:/Users/NeerajK/.gemini/antigravity/brain/34267e06-d3d5-4ac2-88b6-e12e9406b065/screenshot_desktop_1366.png)
+- **Desktop (1366x768):** `screenshot_desktop_1366.png`
   - Clean card rendering, all controls and labels legible
-- **Mobile (430px):** [screenshot_mobile_430.png](file:///C:/Users/NeerajK/.gemini/antigravity/brain/34267e06-d3d5-4ac2-88b6-e12e9406b065/screenshot_mobile_430.png)
+- **Mobile (430px):** `screenshot_mobile_430.png`
   - Stacks into single column cleanly
-- **Mobile (390px):** [screenshot_mobile_390.png](file:///C:/Users/NeerajK/.gemini/antigravity/brain/34267e06-d3d5-4ac2-88b6-e12e9406b065/screenshot_mobile_390.png)
+- **Mobile (390px):** `screenshot_mobile_390.png`
   - Baseline production observation on deployed commit `84234d4`
-- **Mobile (360px):** [screenshot_mobile_360.png](file:///C:/Users/NeerajK/.gemini/antigravity/brain/34267e06-d3d5-4ac2-88b6-e12e9406b065/screenshot_mobile_360.png)
+- **Mobile (360px):** `screenshot_mobile_360.png`
   - Compact mobile behavior tested
 
 ---
@@ -96,42 +107,33 @@ cache-control: public, max-age=0, must-revalidate
 
 ### Issue 1: Mobile Hero Headline Truncation on Viewports $\le 390\text{px}$
 - **Severity:** Low-Medium (Visual/Responsive polish)
-- **Status in Deployed Commit (`84234d4`):** Present
+- **Status at initial revision (`84234d4`):** Present
 - **Reproduction Steps:**
-  1. Open `https://vayusaathi.vercel.app` on a mobile browser or Chrome DevTools Device Mode set to 390px (iPhone 12/13/14) or 360px (Galaxy S compact).
+  1. In the original QA run, open the deployment of `84234d4` at a 390px or 360px viewport.
   2. Observe the main hero title: *"Breathe Better, Live Healthier"*.
   3. The word *"Healthier"* is clipped at the right margin because the font-size clamp `clamp(2.2rem, 5.2vw, 3.8rem)` does not scale down sufficiently for narrow mobile screens.
-- **Fix Status:** **RESOLVED** on branch `fix/mobile-production-qa` by applying responsive fluid clamp `clamp(1.75rem, 6.2vw, 2.5rem)` at $\le 640\text{px}$ and `clamp(1.5rem, 6vw, 1.85rem)` at $\le 380\text{px}$ in `src/app/globals.css`.
+- **Fix Status:** **Deployed in `f146546`** by applying responsive fluid clamp `clamp(1.75rem, 6.2vw, 2.5rem)` at $\le 640\text{px}$ and `clamp(1.5rem, 6vw, 1.85rem)` at $\le 380\text{px}$ in `src/app/globals.css`.
 
 ### Issue 2: Mobile Search Bar Controls Cramping on Viewports $\le 390\text{px}$
 - **Severity:** Low-Medium (Touch Ergonomics)
-- **Status in Deployed Commit (`84234d4`):** Present
+- **Status at initial revision (`84234d4`):** Present
 - **Reproduction Steps:**
   1. In a 360px or 390px viewport, observe the search bar container.
   2. The input field, *"Search"* button, and *"Use my location"* button attempt to stay on a single horizontal row, causing the location button label to truncate to *"Use m..."*.
-- **Fix Status:** **RESOLVED** on branch `fix/mobile-production-qa` via semantic `.search-input-group` (Row 1) and `.search-actions-group` (Row 2) with balanced `flex: 1 1 0` scaling at $\le 640\text{px}$, ensuring full visibility of *"Use my location"* without clipping.
+- **Fix Status:** **Deployed in `f146546`** via semantic `.search-input-group` (Row 1) and `.search-actions-group` (Row 2) with balanced `flex: 1 1 0` scaling at $\le 640\text{px}$, ensuring full visibility of *"Use my location"* without clipping.
 
 ---
 
 ## 5. Security & Resilience Assessment
 
 1. **Secret Leakage Prevention:** Verified that neither `OPENAQ_API_KEY` nor `GEMINI_API_KEY` is present in HTML responses, client JavaScript bundles, or client-accessible DOM nodes. All API communication uses server-only route handlers.
-2. **Vercel Edge Firewall:** Confirmed that rapid burst traffic triggers rate-limiting (HTTP 429), preventing unauthorized denial-of-wallet or quota exhaustion attacks.
+2. **Vercel Edge Firewall:** Burst requests returned HTTP 429, confirming the per-IP request limit for the tested traffic. Provider-wide quotas still apply.
 3. **Bounded Payloads:** All Route Handlers enforce strict Zod schemas and character/byte bounds (e.g. 2048-byte limit on profile payloads).
 
 ---
 
-## 6. Recommendations & Next Steps
+## 6. Remaining submission tasks
 
-1. **Review and Merge `fix/mobile-production-qa` into `main`:** The changes on `fix/mobile-production-qa` resolve the mobile headline truncation, search button wrapping, and tab swiping while preserving all passing automated tests and the approved desktop cockpit view.
-2. **Trigger Vercel Production Redeployment:** Once approved by the team lead, merge `fix/mobile-production-qa` into `main` to update the live production deployment.
-3. **Prototype Submission:** The application meets all PromptWars Challenge 06 requirements: real external air-quality data from Indian locations, honest source attribution, separate station vs modeled data, accessible household personalization, and grounded Gemini recommendations.
-
----
-
-## 7. Overall Launch Readiness Verdict
-
-**Verdict:** **READY FOR COMPETITION SUBMISSION**  
-The core architecture, data integrity, Gemini structured AI inference, and security boundaries are 100% verified live on Vercel. The mobile styling fixes on `fix/mobile-production-qa` bring the experience to visual perfection across all mobile device viewports (360px, 390px, 430px) while maintaining full desktop fidelity (1366px, 1920px).
-
-*(Note: This QA report is saved in `docs/PRODUCTION_QA_REPORT.md` within the repository and remains uncommitted pending lead confirmation.)*
+- Record the demo of the public application.
+- Publish the mandatory LinkedIn technical post.
+- Submit the production URL, GitHub repository, demo recording, and LinkedIn post to PromptWars by 29 November 2026, 11:59 PM IST. See the [submission checklist](CHALLENGE_REQUIREMENTS.md).

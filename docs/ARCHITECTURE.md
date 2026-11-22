@@ -2,7 +2,7 @@
 
 ## Application boundary
 
-Next.js App Router serves the dashboard and three Route Handlers. TypeScript runs in strict mode and Tailwind CSS provides styling. The default Node runtime is compatible with a Next.js deployment on Vercel. The repository is initialized locally with Git.
+Next.js App Router serves the dashboard and three Route Handlers. TypeScript runs in strict mode and Tailwind CSS provides styling. The application is deployed on Vercel using Node.js 24 and the Next.js preset from GitHub `main`.
 
 | Route | Input | Behavior |
 | --- | --- | --- |
@@ -22,7 +22,7 @@ Open-Meteo returns an outdoor estimate for the supplied coordinates. For India, 
 
 The server sends Gemini the city name, categorical profile, source-labeled recent outdoor concentrations and eligible action IDs, titles and explanations. The model returns one ID for each of the daily routine, indoor air and lower-emission travel categories. Zod validates the shape and the service validates the options against the household and data context. After Gemini returns a valid selection, the server adds plan.source = "gemini". The UI renders the live-inference badge only for that origin and renders grounded card labels only if recent provider data was used. An explicitly marked fallback is displayed as fallback guidance. A plan with unknown origin is displayed without Gemini attribution. A server catalogue supplies the action copy and qualitative impact explanation. Household categories can add indoor and routine options. The commute selection controls eligible travel options. Shared advice remains eligible when relevant. Limited data constrains routine guidance to checking conditions. Measured values always come from their providers.
 
-Public deployment will need a request-quota strategy for paid or rate-limited services. Phase 1 bounds request size and outbound calls, and the default local dev server can be bound to loopback.
+The production Vercel firewall limits recommendation POSTs to three per IP per 60 seconds. The server also bounds request size and outbound calls. Provider-wide quotas still apply. See the [production QA report](PRODUCTION_QA_REPORT.md) for the observed HTTP 429 behavior.
 
 ## References
 
