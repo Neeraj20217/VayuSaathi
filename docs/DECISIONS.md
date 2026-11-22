@@ -52,3 +52,7 @@ The Next.js lint preset currently relies on plugins with ESLint 9 peer support. 
 | Mobile precision (360px, 390px, 430px) | Converted navigation tabs to a smooth horizontally-swipeable pill list without wrapping or clipping. Added responsive clamp sizing for PM concentration numerals (`clamp(1.4rem, 4vw, 1.85rem)`), optimized search action buttons for compact widths, and set primary search and tab controls to at least 44 px tall. |
 | Live Gemini verification | Antigravity reported live Gemini structured output with Hyderabad (`1269843`), confirming authentic Gemini-selected action IDs (`indoorPlay`, `playSpace`, `combine`) grounded in physical OpenAQ station observations (`basis: "recent-station"`). The badge is gated on a server-attested Gemini source after the final review. |
 | Missing data & provider resilience tests | Added 2 automated tests in `tests/air-quality.test.ts` verifying graceful fallback when zero stations exist within 25 km and resilience when an atmospheric model pollutant is null. Total test suite expanded to 28 passing tests. |
+
+## Production status · 22 November 2026
+
+The earlier deployment and publication planning items are now implemented. GitHub `main` is public, Vercel hosts the production application, and a Vercel firewall rule limits recommendation POSTs to three per IP per 60 seconds. Provider-wide quotas still apply. The [production QA report](PRODUCTION_QA_REPORT.md) records the initial checks and the deployed mobile correction. The [submission checklist](CHALLENGE_REQUIREMENTS.md) tracks the remaining work.
