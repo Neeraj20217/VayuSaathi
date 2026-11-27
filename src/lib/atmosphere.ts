@@ -7,6 +7,7 @@ export type SkylineKey =
   | "mumbai"
   | "bengaluru"
   | "kolkata"
+  | "telangana"
   | "generic";
 
 export type AtmosphereBasis = "station" | "model" | "unavailable" | "loading";
@@ -43,7 +44,8 @@ const SKYLINE_LANDMARKS: Record<SkylineKey, string> = {
   mumbai: "Gateway of India",
   bengaluru: "Vidhana Soudha",
   kolkata: "Howrah Bridge",
-  generic: "Indian urban skyline",
+  telangana: "Telangana regional landscape",
+  generic: "Illustrative Indian landscape",
 };
 
 function clamp01(value: number): number {
@@ -72,27 +74,24 @@ function mixHex(fromHex: string, toHex: string, t: number): string {
   return `#${toByte(lerp(r1, r2, clamped))}${toByte(lerp(g1, g2, clamped))}${toByte(lerp(b1, b2, clamped))}`;
 }
 
+const CITY_ARTWORK = [
+  { id: 1269843, names: ["hyderabad"], regions: ["telangana"], skyline: "hyderabad" },
+  { id: 1273294, names: ["delhi", "new delhi"], regions: ["delhi", "national capital territory of delhi"], skyline: "delhi" },
+  { id: 1275339, names: ["mumbai"], regions: ["maharashtra"], skyline: "mumbai" },
+  { id: 1277333, names: ["bengaluru", "bangalore"], regions: ["karnataka"], skyline: "bengaluru" },
+  { id: 1275004, names: ["kolkata"], regions: ["west bengal"], skyline: "kolkata" },
+] satisfies { id: number; names: string[]; regions: string[]; skyline: SkylineKey }[];
+
+// Register only states and union territories with actual regional artwork.
+const REGIONAL_ARTWORK = new Map<string, SkylineKey>([["telangana", "telangana"]]);
+
 export function resolveCitySkyline(city: City | null): SkylineKey {
   if (!city) return "generic";
   const name = city.name.trim().toLowerCase();
   const region = (city.region ?? "").trim().toLowerCase();
-
-  if (name === "hyderabad" && (!region || region.includes("telangana"))) {
-    return "hyderabad";
-  }
-  if ((name === "delhi" || name === "new delhi") && (!region || region.includes("delhi"))) {
-    return "delhi";
-  }
-  if (name === "mumbai" && (!region || region.includes("maharashtra"))) {
-    return "mumbai";
-  }
-  if ((name === "bengaluru" || name === "bangalore") && (!region || region.includes("karnataka"))) {
-    return "bengaluru";
-  }
-  if (name === "kolkata" && (!region || region.includes("bengal"))) {
-    return "kolkata";
-  }
-  return "generic";
+  const dedicated = CITY_ARTWORK.find((art) => art.names.includes(name) &&
+    (region ? art.regions.includes(region) : city.id === art.id));
+  return dedicated?.skyline ?? REGIONAL_ARTWORK.get(region) ?? "generic";
 }
 
 function computeReadingIntensity(readings: Reading[]): number {
@@ -143,12 +142,12 @@ export function computeAtmosphereState({
       hazeColor: isDark ? "#151920" : "#E7EEE7",
       hazeOpacity: isDark ? 0.22 : 0.14,
       farLayerOpacity: isDark ? 0.34 : 0.24,
-      landmarkOpacity: isDark ? 0.56 : 0.44,
+      landmarkOpacity: 0.9,
       skylineContrast: 1,
       skylineColorFar: isDark ? "#2C323C" : "#8BA697",
-      skylineColorMid: isDark ? "#3B424E" : "#4F7260",
-      skylineColorAccent: isDark ? "#525B6B" : "#2A4D3E",
-      skylineCutoutColor: isDark ? "#20242B" : "#FFFFFF",
+      skylineColorMid: isDark ? "#6C8095" : "#4F7260",
+      skylineColorAccent: isDark ? "#A0ADBD" : "#2A4D3E",
+      skylineCutoutColor: isDark ? "#16212B" : "#FFFFFF",
       disclosure: loading
         ? "Updating outdoor readings. Illustrative atmosphere held neutral. Not a live view."
         : "Illustrative atmosphere held neutral while recent outdoor readings are unavailable. Not a live view.",
@@ -174,11 +173,11 @@ export function computeAtmosphereState({
       hazeColor: isDark ? "#151920" : "#E7EEE7",
       hazeOpacity: isDark ? 0.24 : 0.16,
       farLayerOpacity: isDark ? 0.34 : 0.24,
-      landmarkOpacity: isDark ? 0.56 : 0.44,
+      landmarkOpacity: 0.9,
       skylineContrast: 1,
       skylineColorFar: isDark ? "#2C323C" : "#8BA697",
-      skylineColorMid: isDark ? "#3B424E" : "#4F7260",
-      skylineColorAccent: isDark ? "#525B6B" : "#2A4D3E",
+      skylineColorMid: isDark ? "#6C8095" : "#4F7260",
+      skylineColorAccent: isDark ? "#A0ADBD" : "#2A4D3E",
       skylineCutoutColor: isDark ? "#20242B" : "#FFFFFF",
       disclosure:
         "Illustrative atmosphere held neutral because recent outdoor readings are unavailable. Not a live view.",
@@ -240,10 +239,8 @@ export function computeAtmosphereState({
   const farLayerOpacity = isDark
     ? Number((0.40 - intensity * 0.10).toFixed(3))
     : Number((0.34 - intensity * 0.10).toFixed(3));
-  const landmarkOpacity = isDark
-    ? Number((0.70 - intensity * 0.14).toFixed(3))
-    : Number((0.62 - intensity * 0.14).toFixed(3));
-  const skylineContrast = Number((1 - intensity * 0.24).toFixed(3));
+  const landmarkOpacity = Number((0.94 - intensity * 0.10).toFixed(3));
+  const skylineContrast = Number((1.12 - intensity * 0.14).toFixed(3));
 
   const skylineColorFar = isDark
     ? usingStation
@@ -255,21 +252,21 @@ export function computeAtmosphereState({
 
   const skylineColorMid = isDark
     ? usingStation
-      ? mixHex("#1A2028", "#22262C", intensity)
-      : mixHex("#162536", "#1F2B38", intensity)
+      ? mixHex("#6C8298", "#697585", intensity)
+      : mixHex("#708AA4", "#677D90", intensity)
     : usingStation
       ? mixHex("#264D3E", "#464E43", intensity)
       : mixHex("#264969", "#425465", intensity);
 
   const skylineColorAccent = isDark
     ? usingStation
-      ? mixHex("#0E1217", "#14171C", intensity)
-      : mixHex("#0D1723", "#141D28", intensity)
+      ? mixHex("#A8B9C9", "#899AAB", intensity)
+      : mixHex("#AAC0D3", "#8EA3B8", intensity)
     : usingStation
       ? mixHex("#133326", "#2A352D", intensity)
       : mixHex("#163554", "#273D52", intensity);
 
-  const skylineCutoutColor = isDark ? mixHex(skyBottom, "#60798B", 0.35) : "#FFFFFF";
+  const skylineCutoutColor = isDark ? mixHex(skyBottom, "#101318", 0.45) : "#FFFFFF";
 
   const disclosure = usingStation
     ? "Illustrative atmosphere based on available outdoor particle readings. Not a live view."

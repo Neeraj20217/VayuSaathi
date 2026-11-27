@@ -20,31 +20,33 @@ export function AtmosphericBackground({
 }: AtmosphericBackgroundProps) {
   return (
     <section
-      className="relative overflow-hidden border-b border-border/80 shadow-[0_1px_2px_rgba(25,55,44,0.04)]"
+      className="relative"
       aria-label="City atmosphere and location selection"
     >
-      {/* City-specific architectural skyline layer anchored cleanly along the bottom horizon */}
+      {/* Decorative scenery behind the city controls */}
       <div
-        className="pointer-events-none absolute inset-x-0 bottom-0 z-[1] h-[136px] sm:h-[168px]"
+        className="atmosphere-scenery pointer-events-none absolute inset-0 overflow-hidden"
         aria-hidden="true"
       >
-        <CitySkylineSvg
-          skyline={atmosphere.skyline}
-          farColor={atmosphere.skylineColorFar}
-          midColor={atmosphere.skylineColorMid}
-          accentColor={atmosphere.skylineColorAccent}
-          cutoutColor={atmosphere.skylineCutoutColor}
-          farOpacity={atmosphere.farLayerOpacity}
-          landmarkOpacity={atmosphere.landmarkOpacity}
-          contrast={atmosphere.skylineContrast}
-        />
+        <div className="atmosphere-landscape absolute">
+          <CitySkylineSvg
+            skyline={atmosphere.skyline}
+            farColor={atmosphere.skylineColorFar}
+            midColor={atmosphere.skylineColorMid}
+            accentColor={atmosphere.skylineColorAccent}
+            cutoutColor={atmosphere.skylineCutoutColor}
+            farOpacity={atmosphere.farLayerOpacity}
+            landmarkOpacity={atmosphere.landmarkOpacity}
+            contrast={atmosphere.skylineContrast}
+          />
+        </div>
 
-        {/* Subtle atmospheric horizon depth anchored strictly at the bottom of the skyline */}
+        {/* Fade the clouds behind the landmark to keep the silhouette legible. */}
         <div
           className="absolute inset-0 transition-[opacity,background-color] duration-700 ease-out motion-reduce:transition-none"
           style={{
-            background: `linear-gradient(180deg, transparent 0%, transparent 40%, ${atmosphere.hazeColor} 92%, ${atmosphere.skyBottom} 100%)`,
-            opacity: atmosphere.hazeOpacity,
+            background: `radial-gradient(ellipse at 68% 78%, ${atmosphere.skyBottom} 0%, ${atmosphere.hazeColor} 45%, transparent 80%)`,
+            opacity: 0.78,
           }}
         />
       </div>
@@ -73,6 +75,7 @@ export function AtmosphericBackground({
 
         {children}
       </div>
+
     </section>
   );
 }

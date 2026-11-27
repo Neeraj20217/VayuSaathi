@@ -59,7 +59,7 @@ export function SiteHeader({ activeTab, onTabChange, activeCity }: SiteHeaderPro
   }
 
   return (
-    <header className="glass-header border-b border-(--glass-border) shadow-(--glass-chrome-header-shadow)">
+    <header className="glass-header border-b border-(--glass-border)/60">
       <div className="mx-auto flex w-full max-w-[1380px] items-center justify-between gap-4 px-4 py-3 sm:px-6">
         <div className="flex min-w-0 items-center gap-3">
           <div
@@ -86,12 +86,12 @@ export function SiteHeader({ activeTab, onTabChange, activeCity }: SiteHeaderPro
         <div className="flex shrink-0 items-center gap-2 sm:gap-2.5">
           {/* Single unified desktop navigation (Radix TabsList for keyboard Arrow/Home/End & ARIA) */}
           <nav className="hidden md:block" aria-label="Primary navigation">
-            <TabsList variant="default" className="h-auto gap-1 bg-muted/65 p-1">
+            <TabsList variant="default" className="h-auto gap-1 glass-control border border-(--glass-border)/60 p-1">
               {NAV_ITEMS.map(({ id, label, icon: Icon }) => (
                 <TabsTrigger
                   key={id}
                   value={id}
-                  className="min-h-10 gap-1.5 rounded-md px-3.5 text-sm font-medium text-muted-foreground data-active:bg-card data-active:text-station data-active:shadow-xs dark:data-active:border-border dark:data-active:bg-secondary dark:data-active:text-foreground"
+                  className="min-h-10 gap-1.5 rounded-md px-3.5 text-sm font-medium text-muted-foreground data-active:border-primary/40 data-active:bg-primary/10 data-active:text-station dark:data-active:border-primary/40 dark:data-active:bg-primary/10 dark:data-active:text-station"
                 >
                   <Icon className="size-4" strokeWidth={1.65} aria-hidden="true" />
                   <span>{label}</span>
@@ -111,13 +111,13 @@ export function SiteHeader({ activeTab, onTabChange, activeCity }: SiteHeaderPro
                 type="button"
                 variant="outline"
                 size="icon"
-                className="size-11"
+                className="glass-control size-11"
                 aria-label="Open navigation menu"
               >
                 <Menu className="size-5" strokeWidth={1.75} aria-hidden="true" />
               </Button>
             </SheetTrigger>
-            <SheetContent side="right" className="w-[300px] sm:w-[340px]">
+            <SheetContent side="right" className="glass-chrome w-[300px] sm:w-[340px]">
               <SheetHeader className="text-left">
                 <SheetTitle className="flex items-center gap-2 text-base font-semibold">
                   <Wind className="size-4 text-station" aria-hidden="true" />
@@ -142,7 +142,7 @@ export function SiteHeader({ activeTab, onTabChange, activeCity }: SiteHeaderPro
                       className={cn(
                         "flex min-h-12 w-full items-start gap-3 rounded-lg border px-3 py-2.5 text-left transition-colors",
                         isActive
-                          ? "border-station-border bg-station-surface text-station dark:border-border dark:bg-secondary dark:text-foreground"
+                          ? "border-station-border bg-primary/10 text-station dark:border-primary/40"
                           : "border-transparent bg-transparent text-foreground hover:bg-muted"
                       )}
                     >

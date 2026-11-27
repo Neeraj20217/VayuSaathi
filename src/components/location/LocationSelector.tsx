@@ -110,7 +110,7 @@ export function LocationSelector({
                   maxLength={80}
                   readOnly={busy}
                   aria-describedby={searchError ? "city-search-error" : undefined}
-                  className="h-11 bg-card pr-11 pl-9 text-sm shadow-2xs dark:bg-card sm:text-base"
+                  className="glass-control h-11 pr-11 pl-9 text-sm shadow-2xs sm:text-base"
                   onChange={(e) => {
                     onQueryChange(e.target.value);
                     setPopoverOpen(false);
@@ -205,7 +205,7 @@ export function LocationSelector({
           <div className="grid grid-cols-2 gap-2 sm:flex sm:shrink-0 sm:items-center">
             <Button
               type="submit"
-              className="min-h-11 px-4 font-medium shadow-2xs disabled:border disabled:border-border disabled:bg-secondary disabled:text-muted-foreground disabled:opacity-100"
+              className="glass-primary min-h-11 border px-4 font-medium shadow-2xs disabled:opacity-100"
               disabled={busy || query.trim().length < 2}
             >
               {searching ? (
@@ -219,7 +219,7 @@ export function LocationSelector({
             <Button
               type="button"
               variant="outline"
-              className="min-h-11 border-input bg-card px-3.5 font-medium text-foreground hover:bg-accent dark:bg-card dark:hover:bg-accent"
+              className="glass-control min-h-11 border-input px-3.5 font-medium text-foreground"
               onClick={() => {
                 setPopoverOpen(true);
                 onUseLocation();
@@ -242,7 +242,7 @@ export function LocationSelector({
           role="group"
           aria-label="Popular Indian metros"
         >
-          <span className="mr-0.5 rounded-md border border-border/90 bg-card px-2.5 py-1 text-xs font-medium text-foreground shadow-2xs">
+          <span className="glass-control mr-0.5 rounded-md border border-(--glass-border) px-2.5 py-1 text-xs font-medium text-foreground shadow-2xs">
             Quick cities
           </span>
           {POPULAR_METROS.map((metro) => {
@@ -263,14 +263,14 @@ export function LocationSelector({
                 className={cn(
                   "min-h-11 gap-1.5 px-3 text-xs font-medium",
                   isCurrent
-                    ? "border-primary bg-primary text-primary-foreground hover:bg-primary/90 dark:bg-primary dark:text-primary-foreground"
-                    : "border-border bg-card text-foreground hover:bg-accent dark:bg-card dark:hover:bg-accent"
+                    ? "glass-primary border"
+                    : "glass-control border-border text-foreground"
                 )}
               >
                 <span
                   className={cn(
                     "font-mono text-[11px]",
-                    isCurrent ? "text-primary-foreground/80" : "text-muted-foreground"
+                    isCurrent ? "text-current" : "text-muted-foreground"
                   )}
                 >
                   {metro.code}

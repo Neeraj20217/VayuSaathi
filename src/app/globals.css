@@ -112,16 +112,7 @@
   --glass-bg: rgba(255, 255, 255, 0.68);
   --glass-rim-bg: rgba(255, 255, 255, 0.48);
   --glass-chrome-bg: rgba(255, 255, 255, 0.90);
-  --glass-header-bg: rgba(255, 255, 255, 0.90);
-  --glass-footer-bg: rgba(255, 255, 255, 0.88);
   --glass-chrome-filter: blur(12px) saturate(1.08) brightness(1.30);
-  --glass-chrome-header-shadow:
-    0 2px 14px -4px rgba(25, 55, 44, 0.06),
-    inset 0 1px 0 rgba(255, 255, 255, 1),
-    inset 0 -1px 0 rgba(255, 255, 255, 0.95);
-  --glass-chrome-footer-shadow:
-    0 -2px 16px -4px rgba(25, 55, 44, 0.06),
-    inset 0 1px 0 rgba(255, 255, 255, 0.98);
   --glass-subcard-bg: rgba(255, 255, 255, 0.78);
   --glass-cell-bg: rgba(255, 255, 255, 0.74);
   --glass-border: rgba(255, 255, 255, 0.85);
@@ -195,15 +186,7 @@
   --glass-bg: rgba(32, 36, 43, 0.72);
   --glass-rim-bg: rgba(32, 36, 43, 0.52);
   --glass-chrome-bg: rgba(24, 28, 34, 0.80);
-  --glass-header-bg: rgba(24, 28, 34, 0.80);
-  --glass-footer-bg: rgba(24, 28, 34, 0.80);
   --glass-chrome-filter: blur(14px) saturate(118%);
-  --glass-chrome-header-shadow:
-    0 2px 16px -4px rgba(0, 0, 0, 0.45),
-    inset 0 -1px 0 rgba(241, 243, 245, 0.14);
-  --glass-chrome-footer-shadow:
-    0 -2px 18px -4px rgba(0, 0, 0, 0.40),
-    inset 0 1px 0 rgba(241, 243, 245, 0.14);
   --glass-subcard-bg: rgba(36, 41, 49, 0.76);
   --glass-cell-bg: rgba(43, 48, 56, 0.68);
   --glass-border: rgba(182, 189, 199, 0.22);
@@ -300,21 +283,42 @@
 }
 
 .glass-chrome {
-  background: var(--glass-chrome-bg);
+  background: var(--glass-subcard-bg);
   -webkit-backdrop-filter: var(--glass-chrome-filter);
   backdrop-filter: var(--glass-chrome-filter);
 }
 
-.glass-header {
-  background-color: var(--glass-header-bg);
-  -webkit-backdrop-filter: var(--glass-chrome-filter);
-  backdrop-filter: var(--glass-chrome-filter);
-}
-
+.glass-header,
 .glass-footer {
-  background-color: var(--glass-footer-bg);
+  background-color: var(--glass-bg);
   -webkit-backdrop-filter: var(--glass-chrome-filter);
   backdrop-filter: var(--glass-chrome-filter);
+}
+
+.glass-control {
+  background-color: var(--glass-subcard-bg);
+  backdrop-filter: var(--glass-chrome-filter);
+}
+
+button.glass-control:hover:enabled {
+  background-color: var(--glass-chrome-bg);
+}
+
+.glass-primary {
+  color: var(--station);
+  border-color: var(--primary);
+  background-color: color-mix(in srgb, var(--primary) 15%, var(--glass-chrome-bg));
+  backdrop-filter: var(--glass-chrome-filter);
+}
+
+.glass-primary:hover:enabled {
+  background-color: color-mix(in srgb, var(--primary) 22%, var(--glass-chrome-bg));
+}
+
+.glass-primary:disabled {
+  color: var(--muted-foreground);
+  border-color: var(--input);
+  background-color: var(--glass-subcard-bg);
 }
 
 .glass-rim-mask {
@@ -507,5 +511,23 @@
     animation-duration: var(--drift-duration) !important;
     animation-iteration-count: infinite !important;
     animation-play-state: paused;
+  }
+}
+
+.atmosphere-scenery {
+  mask-image: linear-gradient(to bottom, transparent, black 10%, black 87%, transparent);
+}
+
+.atmosphere-landscape {
+  right: max(-5rem, calc((100% - 1380px) / 2));
+  bottom: -0.5rem;
+  width: clamp(39rem, 92vw, 86rem);
+  aspect-ratio: 1440 / 200;
+  z-index: 1;
+}
+
+@media (width < 40rem) {
+  .atmosphere-landscape {
+    right: -4rem;
   }
 }

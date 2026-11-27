@@ -29,6 +29,10 @@ describe("resolveCitySkyline", () => {
     expect(resolveCitySkyline(chanderi)).toBe("generic");
     expect(resolveCitySkyline(delhiMp)).toBe("generic");
     expect(resolveCitySkyline(null)).toBe("generic");
+    expect(resolveCitySkyline(makeCity(3, "Warangal", " Telangana "))).toBe("telangana");
+    expect(resolveCitySkyline({ ...hyderabad, region: null })).toBe("hyderabad");
+    expect(resolveCitySkyline(makeCity(3, "Hyderabad", null))).toBe("generic");
+    expect(resolveCitySkyline(makeCity(3, "Hyderabad", "Andhra Pradesh"))).toBe("generic");
   });
 });
 

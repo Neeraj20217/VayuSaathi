@@ -4,7 +4,7 @@ export function SiteFooter() {
   return (
     <footer
       id="about-project"
-      className="glass-footer mt-12 border-t border-(--glass-border) shadow-(--glass-chrome-footer-shadow)"
+      className="glass-footer mt-12 border-t border-(--glass-border)/60"
     >
       <div className="mx-auto w-full max-w-[1380px] px-4 py-8 sm:px-6">
         <div className="grid gap-8 md:grid-cols-[1.3fr_1fr_1fr]">

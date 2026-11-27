@@ -24,19 +24,19 @@ export function CitySkylineSvg({
   return (
     <svg
       viewBox="0 0 1440 200"
-      preserveAspectRatio="xMidYMax slice"
+      preserveAspectRatio="xMidYMax meet"
       aria-hidden="true"
       className="pointer-events-none h-full w-full select-none transition-[filter,opacity] duration-700 ease-out motion-reduce:transition-none"
       style={{ filter: `contrast(${contrast})` }}
     >
-      {/* Far ambient urban backdrop shared with subtle city-specific rhythm */}
-      <g
+      {/* Distant buildings for the dedicated city scenes */}
+      {skyline !== "generic" && skyline !== "telangana" && <g
         fill={farColor}
         opacity={farOpacity}
         className="transition-opacity duration-700 ease-out motion-reduce:transition-none"
       >
         <path d="M0 200V154h38v-18h26v18h28v-28h36v28h30v-14h24v14h42v-36h44v36h26v-20h30v20h48v-26h34v26h46v-18h28v18h36v-34h40v34h30v-16h34v16h44v-28h36v28h32v-22h28v22h46v-38h40v38h32v-16h36v16h42v-24h38v24h46v-30h34v30h44v-18h32v18h46v-26h36v26h46v-16h36v16h42V200H0Z" />
-      </g>
+      </g>}
 
       {/* Mid-ground city landmark composition */}
       <g
@@ -74,12 +74,8 @@ export function CitySkylineSvg({
         {skyline === "kolkata" && (
           <KolkataHowrahBridge midColor={midColor} accentColor={accentColor} />
         )}
-        {skyline === "generic" && (
-          <GenericIndianSkyline
-            midColor={midColor}
-            accentColor={accentColor}
-            cutoutColor={cutoutColor}
-          />
+        {(skyline === "generic" || skyline === "telangana") && (
+          <Landscape regional={skyline === "telangana"} midColor={midColor} accentColor={accentColor} />
         )}
       </g>
     </svg>
@@ -109,7 +105,7 @@ function HyderabadCharminar({
         opacity="0.45"
       />
 
-      {/* Charminar monument centered-right for clear visibility next to controls */}
+      {/* Charminar monument */}
       <g transform="translate(880, 14)">
         {/* Central structure */}
         <rect x="46" y="72" width="148" height="114" fill={midColor} />
@@ -398,37 +394,18 @@ function KolkataHowrahBridge({ midColor, accentColor }: { midColor: string; acce
   );
 }
 
-function GenericIndianSkyline({
-  midColor,
-  accentColor,
-  cutoutColor,
-}: {
+function Landscape({ regional, midColor, accentColor }: {
+  regional: boolean;
   midColor: string;
   accentColor: string;
-  cutoutColor: string;
 }) {
   return (
     <g>
-      {/* Balanced Indian urban neighborhood silhouette */}
-      <path
-        fill={midColor}
-        d="M90 200v-48h88v48H90Zm110 0v-64h74v64h-74Zm100 0v-40h96v40h-96Zm520 0v-58h110v58H820Zm136 0v-74h92v74h-92Zm114 0v-46h104v46h-104Z"
-        opacity="0.72"
-      />
-      {/* Civic arched portico & stepped terrace */}
-      <g transform="translate(960, 96)">
-        <rect x="0" y="34" width="160" height="70" fill={midColor} />
-        <rect x="-6" y="28" width="172" height="8" fill={accentColor} />
-        <path
-          fill={cutoutColor}
-          fillOpacity="0.48"
-          d="M24 104V68c0-10 18-10 18 0v36H24Zm46 0V68c0-10 18-10 18 0v36H70Zm46 0V68c0-10 18-10 18 0v36h-18Z"
-        />
-      </g>
-      {/* Urban trees */}
-      {[340, 410, 880, 1170, 1290].map((cx, i) => (
-        <circle key={i} cx={cx} cy={180} r={16 + (i % 2) * 4} fill={accentColor} opacity="0.58" />
-      ))}
+      <path fill={midColor} opacity="0.55" d="M0 200V159Q160 98 310 148T600 136Q780 68 930 124T1200 126Q1320 90 1440 140V200Z" />
+      {regional && (
+        <path fill={accentColor} d="M710 200q42-38 86-35 12-30 48-33 24-29 62-19 34 5 44 33 36-7 56 21 53 1 93 33Z" />
+      )}
+      <path fill={midColor} d="M0 200V186Q240 160 490 184T940 180Q1180 151 1440 184V200Z" />
     </g>
   );
 }
