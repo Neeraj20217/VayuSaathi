@@ -23,6 +23,10 @@ export interface Reading {
   station?: { id: number; name: string; provider: string; distanceKm: number };
 }
 
+export function eligibleForGrounding(reading: Reading): boolean {
+  return reading.freshness === "recent";
+}
+
 export interface DataSource {
   status: "available" | "no-data" | "unavailable" | "unconfigured" | "partial";
   readings: Reading[];

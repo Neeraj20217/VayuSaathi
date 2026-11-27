@@ -1,7 +1,7 @@
 import "server-only";
 import { GoogleGenAI } from "@google/genai";
 import { z } from "zod";
-import type { Action, AirQuality, Plan, Profile } from "@/lib/contracts";
+import { eligibleForGrounding, type Action, type AirQuality, type Plan, type Profile } from "@/lib/contracts";
 
 const action = (id: string, title: string, why: string): Action => ({ id, title, why });
 
@@ -54,8 +54,8 @@ const travelByCommute = {
 } satisfies Record<Profile["commute"], Action[]>;
 
 export function recommendationContext(air: AirQuality, profile: Profile) {
-  const measured = air.measured.readings.filter((reading) => reading.freshness === "recent");
-  const modeled = air.modeled.readings.filter((reading) => reading.freshness === "recent");
+  const measured = air.measured.readings.filter(eligibleForGrounding);
+  const modeled = air.modeled.readings.filter(eligibleForGrounding);
   const basis = measured.length ? "recent-station" : modeled.length ? "recent-model" : "limited";
   const hasChildren = profile.members.includes("Children");
   const hasOlderAdults = profile.members.includes("Older adults");

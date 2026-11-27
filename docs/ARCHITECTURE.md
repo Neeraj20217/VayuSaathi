@@ -14,9 +14,9 @@ All provider requests use fixed hosts. Coordinates and city identity come from t
 
 ## Outdoor data contract
 
-OpenAQ v3 searches for stationary Indian stations within 25 km of the resolved city center. Phase 1 inspects the first 100 results and checks up to three candidates per pollutant. Candidates are ordered by station-level freshness and distance, and actual readings are ranked by reading-level freshness and distance. The latest endpoint is joined to station sensors by ID to verify pollutant and units. A PM2.5 and PM10 reading may come from different stations and each displays its own provenance.
+OpenAQ v3 searches for stationary Indian stations within 25 km of the resolved city center. The first batch checks up to three candidates per pollutant from the first 100 locations, ordered by station-level freshness and distance. A second batch looks for pollutants still lacking recent observations, within six distinct station requests total. Recent readings favor proximity. Within the delayed and stale bands, newer observations take precedence. The latest endpoint is joined to station sensors by ID to verify pollutant and units. A PM2.5 and PM10 reading may come from different stations and each displays its own provenance.
 
-Open-Meteo returns an outdoor estimate for the supplied coordinates. For India, the CAMS global atmospheric composition model has a grid resolution of about 45 km. Its time is model validity time and the application labels it as such by placing it under modeled estimates. Observation and model time are presented in IST. Negative, malformed, wrong-unit or materially future values are skipped. Zero remains valid. Up to 3 hours old is recent, up to 24 hours is delayed and older readings are stale. A five-minute future tolerance accommodates clock skew. Provider outages are distinct from missing coverage.
+Open-Meteo returns an outdoor estimate for the supplied coordinates. For India, the CAMS global atmospheric composition model has a grid resolution of about 45 km. Its time is model validity time and the application labels it as such by placing it under modeled estimates. Observation and model time are presented in IST. Negative, malformed, wrong-unit or future-dated values are skipped. Zero remains valid. Up to 3 hours old is recent, up to 24 hours is delayed and older readings are stale. Provider outages are distinct from missing coverage.
 
 ## Recommendation contract
 
@@ -70,3 +70,5 @@ The production Vercel firewall limits recommendation POSTs to three per IP per 6
 ```
 
 The device-location shortcut compares coordinates locally with five supported Indian metros. It offers a metro only when it is within 50 km and identifies it as a metro search, leaving India-wide city search available. Readings and plans are scoped to the selected city ID. Each station reading displays its own observation time and station metadata.
+
+The atmospheric background uses three original transparent cloud textures from `scripts/render-clouds.py`. The artwork is generated offline and shipped in `public/atmosphere`. CSS moves and tints the layers using the current atmosphere settings. Reduced motion holds the clouds still. The sky gradient also renders independently of the artwork.

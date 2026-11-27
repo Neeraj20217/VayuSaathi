@@ -32,7 +32,8 @@ afterEach(() => {
 describe("freshness", () => {
   it.each([
     [-hour, "future"],
-    [-60_000, "recent"],
+    [-1, "future"],
+    [0, "recent"],
     [3 * hour, "recent"],
     [3 * hour + 1, "delayed"],
     [24 * hour, "delayed"],
@@ -47,7 +48,7 @@ describe("provider parsing", () => {
     const results = [
       observation(0), observation(-4), observation(null), observation("25"),
       observation(25, { sensorsId: 2 }), observation(25, { locationsId: 82 }),
-      observation(25, { datetime: { utc: timestamp(-hour) } }),
+      observation(25, { datetime: { utc: timestamp(-1) } }),
       observation(25, { datetime: { utc: "yesterday" } }),
     ];
     expect(parseStationReadings({ results }, station, 2.2, now)).toEqual([{
@@ -64,7 +65,35 @@ describe("provider parsing", () => {
 
   it("rejects an invalid model payload and omits future model times", () => {
     expect(() => parseModelReadings({ current: {} }, now)).toThrow();
-    expect(parseModelReadings(model(30, 46, (now + hour) / 1000), now)).toEqual([]);
+    expect(parseModelReadings(model(30, 46, (now + 1000) / 1000), now)).toEqual([]);
+  });
+});
+
+describe("bounded station selection", () => {
+  it.each([
+    { recentAt: 4, requests: 6, selected: 4 },
+    { recentAt: 1, requests: 3, selected: 1 },
+    { recentAt: 7, requests: 6, selected: 6 },
+  ])("limits requests and selects pollutant observations when recentAt=$recentAt", async ({
+    recentAt, requests, selected,
+  }) => {
+    vi.stubEnv("OPENAQ_API_KEY", "fixture");
+    const stations = Array.from({ length: 7 }, (_, i) => ({
+      ...station, id: i + 1, datetimeLast: { utc: timestamp(0) },
+      coordinates: { ...city, latitude: city.latitude + i / 100 },
+    }));
+    const queried: number[] = [];
+    vi.stubGlobal("fetch", async (url: URL) => {
+      if (url.hostname !== "api.openaq.org") return Response.json(model(15, 28));
+      if (url.pathname === "/v3/locations") return Response.json({ results: stations });
+      const id = Number(url.pathname.split("/")[3]);
+      queried.push(id);
+      const age = id === recentAt ? hour : (40 - id) * hour;
+      return Response.json({ results: [observation(20, { locationsId: id, datetime: { utc: timestamp(age) } })] });
+    });
+    const air = await getAirQuality(city, now);
+    expect(queried).toEqual(stations.slice(0, requests).map((s) => s.id));
+    expect(air.measured.readings[0].station?.id).toBe(selected);
   });
 });
 

@@ -31,6 +31,13 @@ describe("grounded plan", () => {
     });
   });
 
+  it.each(["delayed", "stale", "future"] as const)("omits %s readings from both sources", (freshness) => {
+    const readings = [{ ...air.modeled.readings[0], freshness }];
+    const source = { status: "available" as const, readings };
+    expect(recommendationContext({ ...air, measured: source, modeled: source }, profile))
+      .toMatchObject({ basis: "limited", observed: [], modeled: [] });
+  });
+
   it("rejects fabricated reading fields and profile-incompatible choices", () => {
     const context = recommendationContext(air, profile);
     expect(() => parsePlan(JSON.stringify({ ...selection, aqi: 180 }), context)).toThrow();

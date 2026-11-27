@@ -1,7 +1,7 @@
 import "server-only";
 import { z } from "zod";
 import { pollutants, type City, type AirQuality, type DataSource, type Freshness, type Pollutant, type Reading } from "@/lib/contracts";
-import { getJson } from "./http";
+import { getJson, ProviderError } from "./http";
 
 const hour = 3_600_000;
 const isoUtc = z.iso.datetime({ offset: true });
@@ -34,7 +34,7 @@ type Station = z.infer<typeof stationSchema>;
 
 export function freshness(timestamp: string, now: number): Freshness {
   const age = now - Date.parse(timestamp);
-  if (age < -5 * 60_000) return "future";
+  if (age < 0) return "future";
   if (age <= 3 * hour) return "recent";
   if (age <= 24 * hour) return "delayed";
   return "stale";
@@ -94,6 +94,7 @@ function preferredReadings(readings: Reading[]) {
   return pollutants.flatMap((pollutant) => {
     const match = readings.filter((r) => r.pollutant === pollutant).sort((a, b) =>
       rank[a.freshness] - rank[b.freshness] ||
+      (a.freshness !== "recent" ? Date.parse(b.timestamp) - Date.parse(a.timestamp) : 0) ||
       (a.station?.distanceKm ?? 0) - (b.station?.distanceKm ?? 0) ||
       Date.parse(b.timestamp) - Date.parse(a.timestamp)
     )[0];
@@ -125,14 +126,34 @@ async function measured(city: City, now: number): Promise<DataSource> {
     return grade(a.station) - grade(b.station) || a.distance - b.distance;
   });
 
-  const candidates = new Map(pollutants.flatMap((pollutant) => nearby
-    .filter(({ station }) => hasParticleSensor(station, pollutant))
-    .slice(0, 3).map((item) => [item.station.id, item] as const)));
-  const checks = await Promise.allSettled([...candidates.values()].map(async ({ station, distance }) => {
-    const payload = await getJson(new URL("/v3/locations/" + station.id + "/latest", url), headers);
-    return parseStationReadings(payload, station, distance, now);
-  }));
-  const readings = preferredReadings(checks.flatMap((item) => item.status === "fulfilled" ? item.value : []));
+  // Two batches share the original ceiling of six distinct station requests.
+  const checked = new Set<number>();
+  const checks: PromiseSettledResult<Reading[]>[] = [];
+  let readings: Reading[] = [];
+  let needed = pollutants;
+  for (let batch = 0; batch < 2 && needed.length && checked.size < 6; batch++) {
+    const queues = needed.map((pollutant) => nearby.filter(({ station }) =>
+      !checked.has(station.id) && hasParticleSensor(station, pollutant)).slice(0, 3));
+    const candidates: typeof nearby = [];
+    for (let i = 0; i < 3; i++) {
+      for (const queue of queues) {
+        const item = queue[i];
+        if (item && !checked.has(item.station.id) && checked.size < 6) {
+          checked.add(item.station.id);
+          candidates.push(item);
+        }
+      }
+    }
+    if (!candidates.length) break;
+    checks.push(...await Promise.allSettled(candidates.map(async ({ station, distance }) => {
+      const payload = await getJson(new URL("/v3/locations/" + station.id + "/latest", url), headers);
+      return parseStationReadings(payload, station, distance, now);
+    })));
+    readings = preferredReadings(checks.flatMap((item) => item.status === "fulfilled" ? item.value : []));
+    if (checks.some((item) => item.status === "rejected" &&
+      item.reason instanceof ProviderError && [401, 403, 429].includes(item.reason.status))) break;
+    needed = pollutants.filter((p) => !readings.some((r) => r.pollutant === p && r.freshness === "recent"));
+  }
   if (checks.some((item) => item.status === "rejected")) return source(readings.length ? "partial" : "unavailable", readings);
   return source(readings.length ? "available" : "no-data", readings);
 }
