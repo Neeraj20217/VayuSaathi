@@ -40,6 +40,12 @@ export function AboutDataSection() {
             </AlertDescription>
           </Alert>
 
+          <p className="text-sm leading-relaxed text-muted-foreground">
+            The atmospheric background is illustrative. Its colors and clouds respond to recent
+            local station observations when available, or to regional Open-Meteo / CAMS estimates.
+            Without recent readings it stays neutral. The artwork does not show live sky conditions.
+          </p>
+
           <div className="grid gap-4 lg:grid-cols-2">
             <div className="flex flex-col justify-between rounded-lg border border-station-border bg-(--glass-subcard-bg)">
               <div className="flex items-center justify-between gap-2 border-b border-station-border/70 bg-station-surface/65 px-4 py-3">

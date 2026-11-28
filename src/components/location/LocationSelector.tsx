@@ -7,8 +7,6 @@ import {
   Check,
   Loader2,
   LocateFixed,
-  MapPin,
-  Search,
   X,
 } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -21,6 +19,7 @@ import {
   CommandItem,
   CommandList,
 } from "@/components/ui/command";
+import { ExpandingSearchDock } from "@/components/ui/expanding-search-dock-shadcnui";
 import { Input } from "@/components/ui/input";
 import { Popover, PopoverAnchor, PopoverContent } from "@/components/ui/popover";
 import { POPULAR_METROS, type LocationOrigin } from "@/lib/air-quality-utils";
@@ -59,6 +58,8 @@ export function LocationSelector({
   onClearSearch,
 }: LocationSelectorProps) {
   const inputRef = useRef<HTMLInputElement>(null);
+  const dockTriggerRef = useRef<HTMLButtonElement>(null);
+  const [searchExpanded, setSearchExpanded] = useState(false);
   const resultsRef = useRef<HTMLDivElement>(null);
   const [popoverOpen, setPopoverOpen] = useState(false);
 
@@ -68,20 +69,24 @@ export function LocationSelector({
 
   function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
-    if (busy || query.trim().length < 2) return;
+    if (!searchExpanded || busy || query.trim().length < 2) return;
     setPopoverOpen(true);
     onSearch(query);
+  }
+
+  function restoreSearchFocus() {
+    (searchExpanded ? inputRef.current : dockTriggerRef.current)?.focus();
   }
 
   function handleSelectMatch(selected: City) {
     onChooseCity(selected, "selected");
     setPopoverOpen(false);
-    inputRef.current?.focus();
+    restoreSearchFocus();
   }
 
   return (
     <div className="flex flex-col gap-3">
-      <form onSubmit={handleSubmit} className="flex flex-col gap-2.5 sm:flex-row sm:items-stretch">
+      <form onSubmit={handleSubmit} className="flex items-center gap-2.5">
           <Popover
             open={showResultsPopover}
             onOpenChange={(open) => {
@@ -90,49 +95,56 @@ export function LocationSelector({
             }}
           >
             <PopoverAnchor asChild>
-              <div className="relative flex flex-1 items-center">
-                <MapPin
-                  className="pointer-events-none absolute left-3 size-4 text-primary"
-                  strokeWidth={1.75}
-                  aria-hidden="true"
-                />
-                <label htmlFor="city-query" className="sr-only">
-                  Search Indian city or town
-                </label>
-                <Input
-                  id="city-query"
-                  ref={inputRef}
-                  type="search"
-                  value={query}
-                  placeholder="Search Indian city or town (e.g. Delhi, Mumbai, Chanderi)"
-                  required
-                  minLength={2}
-                  maxLength={80}
-                  readOnly={busy}
-                  aria-describedby={searchError ? "city-search-error" : undefined}
-                  className="glass-control h-11 pr-11 pl-9 text-sm shadow-2xs sm:text-base"
-                  onChange={(e) => {
-                    onQueryChange(e.target.value);
-                    setPopoverOpen(false);
-                  }}
-                />
-                {query && (
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    className="absolute right-1 size-9 text-muted-foreground hover:text-foreground"
-                    disabled={busy}
-                    onClick={() => {
-                      onClearSearch();
+              <div className="city-search-slot relative min-w-0" data-expanded={searchExpanded}>
+                <ExpandingSearchDock
+                  expanded={searchExpanded}
+                  onExpandedChange={setSearchExpanded}
+                  inputRef={inputRef}
+                  triggerRef={dockTriggerRef}
+                  disabled={busy}
+                  resultsOpen={showResultsPopover}
+                  canSubmit={query.trim().length >= 2 && !busy}
+                  searching={searching}
+                >
+                  <label htmlFor="city-query" className="sr-only">
+                    Search Indian city or town
+                  </label>
+                  <Input
+                    id="city-query"
+                    ref={inputRef}
+                    type="search"
+                    value={query}
+                    placeholder="Search Indian city or town (e.g. Delhi, Mumbai, Chanderi)"
+                    required={searchExpanded}
+                    disabled={!searchExpanded}
+                    minLength={2}
+                    maxLength={80}
+                    readOnly={busy}
+                    aria-describedby={searchError ? "city-search-error" : undefined}
+                    className="city-search-field h-full rounded-full pr-16 pl-9 text-sm sm:text-base"
+                    onChange={(e) => {
+                      onQueryChange(e.target.value);
                       setPopoverOpen(false);
-                      inputRef.current?.focus();
                     }}
-                    aria-label="Clear city search query"
-                  >
-                    <X className="size-4" aria-hidden="true" />
-                  </Button>
-                )}
+                  />
+                  {query && (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="absolute right-8 top-1/2 size-7 -translate-y-1/2 rounded-full text-muted-foreground hover:text-foreground"
+                      disabled={busy}
+                      onClick={() => {
+                        onClearSearch();
+                        setPopoverOpen(false);
+                        inputRef.current?.focus();
+                      }}
+                      aria-label="Clear city search query"
+                    >
+                      <X className="size-4" aria-hidden="true" />
+                    </Button>
+                  )}
+                </ExpandingSearchDock>
               </div>
             </PopoverAnchor>
 
@@ -144,7 +156,7 @@ export function LocationSelector({
                 event.preventDefault();
                 resultsRef.current?.focus();
               }}
-              onEscapeKeyDown={() => inputRef.current?.focus()}
+              onEscapeKeyDown={restoreSearchFocus}
               className="w-[var(--radix-popover-trigger-width)] min-w-[280px] p-0"
             >
               <Command shouldFilter={false}>
@@ -202,81 +214,53 @@ export function LocationSelector({
             </PopoverContent>
           </Popover>
 
-          <div className="grid grid-cols-2 gap-2 sm:flex sm:shrink-0 sm:items-center">
-            <Button
-              type="submit"
-              className="glass-primary min-h-11 border px-4 font-medium shadow-2xs disabled:opacity-100"
-              disabled={busy || query.trim().length < 2}
-            >
-              {searching ? (
-                <Loader2 className="size-4 animate-spin" aria-hidden="true" />
-              ) : (
-                <Search className="size-4" aria-hidden="true" />
-              )}
-              <span>{searching ? "Searching…" : "Search"}</span>
-            </Button>
-
-            <Button
-              type="button"
-              variant="outline"
-              className="glass-control min-h-11 border-input px-3.5 font-medium text-foreground"
-              onClick={() => {
-                setPopoverOpen(true);
-                onUseLocation();
-              }}
-              disabled={busy}
-            >
-              {locating ? (
-                <Loader2 className="size-4 animate-spin text-primary" aria-hidden="true" />
-              ) : (
-                <LocateFixed className="size-4 text-primary" aria-hidden="true" />
-              )}
-              <span>{locating ? "Locating…" : "Use my location"}</span>
-            </Button>
-          </div>
+          <Button
+            type="button"
+            variant="outline"
+            className="glass-control min-h-11 shrink-0 border-input px-3.5 font-medium text-foreground"
+            onClick={() => {
+              setPopoverOpen(true);
+              onUseLocation();
+            }}
+            disabled={busy}
+          >
+            {locating ? (
+              <Loader2 className="size-4 animate-spin text-primary" aria-hidden="true" />
+            ) : (
+              <LocateFixed className="size-4 text-primary" aria-hidden="true" />
+            )}
+            <span>{locating ? "Locating…" : "Use my location"}</span>
+          </Button>
         </form>
 
         {/* Popular metros quick-select */}
         <div
-          className="flex flex-wrap items-center gap-1.5"
+          className="flex w-fit max-w-full flex-wrap items-center gap-x-1 rounded-xl bg-card/95 px-2 text-foreground backdrop-blur-sm"
           role="group"
           aria-label="Popular Indian metros"
         >
-          <span className="glass-control mr-0.5 rounded-md border border-(--glass-border) px-2.5 py-1 text-xs font-medium text-foreground shadow-2xs">
-            Quick cities
-          </span>
+          <span className="px-2 text-xs font-medium text-muted-foreground">Quick cities</span>
           {POPULAR_METROS.map((metro) => {
             const isCurrent =
               city?.name === metro.name && city.region === metro.region && !city.locality;
             return (
-              <Button
-                key={metro.code}
+              <button
+                key={metro.query}
                 type="button"
-                size="sm"
-                variant={isCurrent ? "default" : "outline"}
                 disabled={busy}
                 onClick={() => {
                   setPopoverOpen(true);
                   onSearch(metro.query);
                 }}
                 aria-pressed={isCurrent}
-                className={cn(
-                  "min-h-11 gap-1.5 px-3 text-xs font-medium",
-                  isCurrent
-                    ? "glass-primary border"
-                    : "glass-control border-border text-foreground"
-                )}
+                className="group relative inline-flex min-h-11 items-center rounded-md px-2.5 pr-5 text-sm font-medium transition-colors hover:enabled:text-station hover:enabled:underline hover:enabled:underline-offset-4 focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-ring aria-pressed:text-station motion-reduce:transition-none"
               >
+                {metro.name}
                 <span
-                  className={cn(
-                    "font-mono text-[11px]",
-                    isCurrent ? "text-current" : "text-muted-foreground"
-                  )}
-                >
-                  {metro.code}
-                </span>
-                <span>{metro.name}</span>
-              </Button>
+                  aria-hidden="true"
+                  className="absolute right-2 size-1.5 rounded-full bg-station opacity-0 transition-opacity group-aria-pressed:opacity-100 motion-reduce:transition-none"
+                />
+              </button>
             );
           })}
         </div>

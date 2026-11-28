@@ -19,7 +19,7 @@ const air: AirQuality = {
   }] },
 };
 const profile: Profile = { members: ["Children"], commute: "No regular commute", priority: "Outdoor activity" };
-const selection = { routine: "indoorPlay", indoor: "smoke", travel: "combine" };
+const selection = { routine: "checkBefore", indoor: "smoke", travel: "combine" };
 
 describe("grounded plan", () => {
   it("keeps recent model context separate and returns vetted explanations", () => {
@@ -27,7 +27,7 @@ describe("grounded plan", () => {
     expect(context.observed).toEqual([]);
     expect(context.modeled[0].source).toBe("Open-Meteo / CAMS");
     expect(parsePlan(JSON.stringify(selection), context)).toMatchObject({
-      basis: "recent-model", actions: { routine: { id: "indoorPlay" }, indoor: { id: "smoke" } },
+      basis: "recent-model", actions: { routine: { id: "checkBefore" }, indoor: { id: "smoke" } },
     });
   });
 
@@ -59,6 +59,58 @@ describe("grounded plan", () => {
   });
 });
 
+
+function sampleAir(pm25: number, pm10: number, station = true): AirQuality {
+  const readings = [
+    { ...air.modeled.readings[0], value: pm25 },
+    { ...air.modeled.readings[0], pollutant: "pm10" as const, value: pm10 },
+  ];
+  const empty = { status: "no-data" as const, readings: [] };
+  return {
+    ...air,
+    measured: station ? { status: "available", readings: readings.map((reading) => ({
+      ...reading, station: { id: 1, name: "Fixture", provider: "Fixture", distanceKm: 2 },
+    })) } : empty,
+    modeled: station ? empty : { status: "available", readings },
+  };
+}
+
+describe("particle-aware selections", () => {
+  const routineIds = (data: AirQuality, household = profile) =>
+    recommendationContext(data, household).choices.routine.map(({ id }) => id);
+
+  it("changes routine options for the same household using either pollutant and rejects out-of-context actions", () => {
+    const lower = sampleAir(20, 42);
+    const higher = sampleAir(20, 148);
+    expect(routineIds(lower)).toEqual(["bundleRoutine", "calmRoute"]);
+    expect(routineIds(higher)).toEqual(["indoorPlay"]);
+    expect(routineIds(sampleAir(105, 42))).toEqual(["indoorPlay"]);
+    expect(routineIds(sampleAir(50, 75))).toEqual(["checkBefore"]);
+    expect(() => parsePlan(JSON.stringify({ ...selection, routine: "calmRoute" }),
+      recommendationContext(higher, profile))).toThrow("outside the allowed profile choices");
+  });
+
+  it("uses household-specific alternatives under the same conditions", () => {
+    const higher = sampleAir(110, 145);
+    expect(routineIds(higher, { ...profile, members: ["Working adults"] })).toEqual(["workBreak"]);
+    expect(routineIds(higher, { ...profile, members: ["Older adults"] })).toEqual(["indoorBreak"]);
+  });
+
+  it("keeps model estimates distinct and does not use them to fill a station gap", () => {
+    const modelOnly = sampleAir(110, 145, false);
+    const context = recommendationContext(modelOnly, profile);
+    expect(context).toMatchObject({ basis: "recent-model", conditions: "higher", observed: [] });
+    expect(routineIds(modelOnly)).toEqual(["modelBackup"]);
+    const partialStation = sampleAir(20, 42);
+    partialStation.measured.readings.pop();
+    expect(routineIds({ ...partialStation, modeled: modelOnly.modeled })).toEqual(["checkBefore"]);
+  });
+
+  it("offers a remote errand when higher readings make an optional active trip less useful", () => {
+    const context = recommendationContext(sampleAir(110, 145), { ...profile, commute: "Walking or cycling" });
+    expect(context.choices.travel.map(({ id }) => id)).toEqual(["deferErrand"]);
+  });
+});
 
 describe("profile-specific choices", () => {
   const working: Profile = { members: ["Working adults"], commute: "Car or two-wheeler", priority: "Lower-emission travel" };

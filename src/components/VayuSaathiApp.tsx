@@ -294,7 +294,7 @@ export function VayuSaathiApp() {
           Skip to main content
         </a>
 
-        <SiteHeader activeTab={activeTab} onTabChange={setActiveTab} activeCity={city} />
+        <SiteHeader activeTab={activeTab} />
 
         <main id="main" tabIndex={-1} className="flex-1 bg-transparent outline-none">
           <AtmosphericBackground city={city} atmosphere={atmosphere}>

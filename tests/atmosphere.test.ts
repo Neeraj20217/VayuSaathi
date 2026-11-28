@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { computeAtmosphereState, resolveCitySkyline } from "@/lib/atmosphere";
+import { computeAtmosphereState } from "@/lib/atmosphere";
+import { CITY_SCENES, REGIONAL_SCENES, resolveCitySkyline } from "@/lib/scenery";
 import type { AirQuality, City } from "@/lib/contracts";
 import { parseStoredTheme, resolveTheme } from "@/lib/theme";
 
@@ -20,19 +21,44 @@ const chanderi = makeCity(1274755, "Chanderi", "Madhya Pradesh");
 const delhiMp = makeCity(10532476, "Delhi", "Madhya Pradesh");
 
 describe("resolveCitySkyline", () => {
-  it("resolves all five supported metros and uses generic skyline for other settlements", () => {
+  it("maps each new dedicated city and representative aliases", () => {
+    const cities = [
+      ["Madras", "Tamil Nadu", "chennai"], ["Vizag", "Andhra Pradesh", "visakhapatnam"],
+      ["Poona", "Maharashtra", "pune"], ["Jaipur", "Rajasthan", "jaipur"],
+      ["Agra", "Uttar Pradesh", "agra"], ["Ahmadabad", "Gujarat", "ahmedabad"],
+      ["Cochin", "Kerala", "kochi"], ["Benares", "Uttar Pradesh", "varanasi"],
+    ];
+    for (const [name, region, key] of cities) {
+      expect(resolveCitySkyline(makeCity(1, name, region))).toBe(key);
+    }
+    expect(cities).toHaveLength(Object.keys(CITY_SCENES).length);
+  });
+
+  it("maps every regional scene and handles provider aliases without guessing ambiguous locations", () => {
+    expect(Object.keys(REGIONAL_SCENES)).toHaveLength(36);
+    for (const [key, scene] of Object.entries(REGIONAL_SCENES)) {
+      expect(resolveCitySkyline(makeCity(1, "Other town", scene.region))).toBe(`region:${key}`);
+    }
+    expect(resolveCitySkyline(makeCity(1, "Leh", "Ladakh"))).toBe("region:ladakh");
+    expect(resolveCitySkyline(makeCity(1, "Port Blair", "Andaman & Nicobar Islands"))).toBe("region:andaman and nicobar islands");
+    expect(resolveCitySkyline(makeCity(1, "Bomdila", "Unknown"))).toBe("generic");
+    expect(computeAtmosphereState({ city: chanderi, air: null, loading: true }).landmarkLabel)
+      .toContain("Madhya Pradesh regional scene");
+  });
+
+  it("resolves all five supported metros and falls back to the region when city artwork is unavailable", () => {
     expect(resolveCitySkyline(hyderabad)).toBe("hyderabad");
     expect(resolveCitySkyline(delhi)).toBe("delhi");
     expect(resolveCitySkyline(mumbai)).toBe("mumbai");
     expect(resolveCitySkyline(bengaluru)).toBe("bengaluru");
     expect(resolveCitySkyline(kolkata)).toBe("kolkata");
-    expect(resolveCitySkyline(chanderi)).toBe("generic");
-    expect(resolveCitySkyline(delhiMp)).toBe("generic");
+    expect(resolveCitySkyline(chanderi)).toBe("region:madhya pradesh");
+    expect(resolveCitySkyline(delhiMp)).toBe("region:madhya pradesh");
     expect(resolveCitySkyline(null)).toBe("generic");
-    expect(resolveCitySkyline(makeCity(3, "Warangal", " Telangana "))).toBe("telangana");
+    expect(resolveCitySkyline(makeCity(3, "Warangal", " Telangana "))).toBe("region:telangana");
     expect(resolveCitySkyline({ ...hyderabad, region: null })).toBe("hyderabad");
     expect(resolveCitySkyline(makeCity(3, "Hyderabad", null))).toBe("generic");
-    expect(resolveCitySkyline(makeCity(3, "Hyderabad", "Andhra Pradesh"))).toBe("generic");
+    expect(resolveCitySkyline(makeCity(3, "Hyderabad", "Andhra Pradesh"))).toBe("region:andhra pradesh");
   });
 });
 
@@ -103,7 +129,7 @@ describe("computeAtmosphereState", () => {
     };
 
     const state = computeAtmosphereState({ city: chanderi, air: modelOnlyAir, loading: false });
-    expect(state.skyline).toBe("generic");
+    expect(state.skyline).toBe("region:madhya pradesh");
     expect(state.basis).toBe("model");
     expect(state.cloudsActive).toBe(true);
     expect(state.intensity).toBeGreaterThan(0);

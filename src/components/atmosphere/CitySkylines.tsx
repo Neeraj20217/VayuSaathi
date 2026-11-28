@@ -1,4 +1,4 @@
-import type { SkylineKey } from "@/lib/atmosphere";
+import { getAddedCityScene, getRegionalScene, type SkylineKey } from "@/lib/scenery";
 
 interface CitySkylineSvgProps {
   skyline: SkylineKey;
@@ -21,6 +21,8 @@ export function CitySkylineSvg({
   landmarkOpacity,
   contrast,
 }: CitySkylineSvgProps) {
+  const regional = getRegionalScene(skyline);
+  const scene = regional ?? getAddedCityScene(skyline);
   return (
     <svg
       viewBox="0 0 1440 200"
@@ -30,7 +32,7 @@ export function CitySkylineSvg({
       style={{ filter: `contrast(${contrast})` }}
     >
       {/* Distant buildings for the dedicated city scenes */}
-      {skyline !== "generic" && skyline !== "telangana" && <g
+      {skyline !== "generic" && !regional && <g
         fill={farColor}
         opacity={farOpacity}
         className="transition-opacity duration-700 ease-out motion-reduce:transition-none"
@@ -74,8 +76,12 @@ export function CitySkylineSvg({
         {skyline === "kolkata" && (
           <KolkataHowrahBridge midColor={midColor} accentColor={accentColor} />
         )}
-        {(skyline === "generic" || skyline === "telangana") && (
-          <Landscape regional={skyline === "telangana"} midColor={midColor} accentColor={accentColor} />
+        {(skyline === "generic" || regional) && <Landscape midColor={midColor} />}
+        {scene && (
+          <g transform="translate(810 0)" data-scene={skyline}>
+            <path fill={accentColor} d={scene.silhouette} />
+            {scene.detail && <path fill={cutoutColor} fillOpacity="0.78" d={scene.detail} />}
+          </g>
         )}
       </g>
     </svg>
@@ -394,17 +400,10 @@ function KolkataHowrahBridge({ midColor, accentColor }: { midColor: string; acce
   );
 }
 
-function Landscape({ regional, midColor, accentColor }: {
-  regional: boolean;
-  midColor: string;
-  accentColor: string;
-}) {
+function Landscape({ midColor }: { midColor: string }) {
   return (
     <g>
       <path fill={midColor} opacity="0.55" d="M0 200V159Q160 98 310 148T600 136Q780 68 930 124T1200 126Q1320 90 1440 140V200Z" />
-      {regional && (
-        <path fill={accentColor} d="M710 200q42-38 86-35 12-30 48-33 24-29 62-19 34 5 44 33 36-7 56 21 53 1 93 33Z" />
-      )}
       <path fill={midColor} d="M0 200V186Q240 160 490 184T940 180Q1180 151 1440 184V200Z" />
     </g>
   );

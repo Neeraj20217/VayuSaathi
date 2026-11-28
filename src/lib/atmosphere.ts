@@ -1,14 +1,7 @@
 import type { AirQuality, City, Reading } from "@/lib/contracts";
 import type { ResolvedTheme } from "@/lib/theme";
 
-export type SkylineKey =
-  | "hyderabad"
-  | "delhi"
-  | "mumbai"
-  | "bengaluru"
-  | "kolkata"
-  | "telangana"
-  | "generic";
+import { getAddedCityScene, getRegionalScene, resolveCitySkyline, type SkylineKey } from "@/lib/scenery";
 
 export type AtmosphereBasis = "station" | "model" | "unavailable" | "loading";
 
@@ -38,13 +31,12 @@ export interface AtmosphereState {
   disclosure: string;
 }
 
-const SKYLINE_LANDMARKS: Record<SkylineKey, string> = {
+const SKYLINE_LANDMARKS: Partial<Record<SkylineKey, string>> = {
   hyderabad: "Charminar",
   delhi: "India Gate",
   mumbai: "Gateway of India",
   bengaluru: "Vidhana Soudha",
   kolkata: "Howrah Bridge",
-  telangana: "Telangana regional landscape",
   generic: "Illustrative Indian landscape",
 };
 
@@ -72,26 +64,6 @@ function mixHex(fromHex: string, toHex: string, t: number): string {
   const [r2, g2, b2] = parseHex(toHex);
   const toByte = (n: number) => Math.round(n).toString(16).padStart(2, "0");
   return `#${toByte(lerp(r1, r2, clamped))}${toByte(lerp(g1, g2, clamped))}${toByte(lerp(b1, b2, clamped))}`;
-}
-
-const CITY_ARTWORK = [
-  { id: 1269843, names: ["hyderabad"], regions: ["telangana"], skyline: "hyderabad" },
-  { id: 1273294, names: ["delhi", "new delhi"], regions: ["delhi", "national capital territory of delhi"], skyline: "delhi" },
-  { id: 1275339, names: ["mumbai"], regions: ["maharashtra"], skyline: "mumbai" },
-  { id: 1277333, names: ["bengaluru", "bangalore"], regions: ["karnataka"], skyline: "bengaluru" },
-  { id: 1275004, names: ["kolkata"], regions: ["west bengal"], skyline: "kolkata" },
-] satisfies { id: number; names: string[]; regions: string[]; skyline: SkylineKey }[];
-
-// Register only states and union territories with actual regional artwork.
-const REGIONAL_ARTWORK = new Map<string, SkylineKey>([["telangana", "telangana"]]);
-
-export function resolveCitySkyline(city: City | null): SkylineKey {
-  if (!city) return "generic";
-  const name = city.name.trim().toLowerCase();
-  const region = (city.region ?? "").trim().toLowerCase();
-  const dedicated = CITY_ARTWORK.find((art) => art.names.includes(name) &&
-    (region ? art.regions.includes(region) : city.id === art.id));
-  return dedicated?.skyline ?? REGIONAL_ARTWORK.get(region) ?? "generic";
 }
 
 function computeReadingIntensity(readings: Reading[]): number {
@@ -122,7 +94,10 @@ export function computeAtmosphereState({
 }): AtmosphereState {
   const isDark = theme === "dark";
   const skyline = resolveCitySkyline(city);
-  const landmarkLabel = SKYLINE_LANDMARKS[skyline];
+  const regional = getRegionalScene(skyline);
+  const landmarkLabel = regional
+    ? `${regional.region} regional scene · ${regional.label}`
+    : getAddedCityScene(skyline)?.label ?? SKYLINE_LANDMARKS[skyline] ?? "Illustrative Indian landscape";
 
   // Never reuse a previous city's visual intensity while loading or mismatched.
   const isMismatched = Boolean(city && air && air.city.id !== city.id);

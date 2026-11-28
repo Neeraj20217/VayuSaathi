@@ -57,6 +57,7 @@ async function verify() {
       panels.length > 0 && panels.every((panel) =>
         document.getElementById(panel.getAttribute("aria-labelledby"))?.getAttribute("aria-controls") === panel.id)), true);
 
+    await page.getByRole("button", { name: "Expand city search" }).click();
     const search = page.locator("#city-query");
     const generate = page.getByRole("button", { name: "Generate action plan", exact: true });
     const submit = async (term) => {

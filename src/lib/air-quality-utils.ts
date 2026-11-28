@@ -164,9 +164,12 @@ export const PLAN_BASIS_COPY: Record<Plan["basis"], string> = {
 };
 
 export const ACTION_BENEFIT_SUMMARY: Record<string, string> = {
+  modelBackup: "Keeps optional activity flexible while you verify local conditions.",
+  bundleRoutine: "Can avoid a separate motorized trip.",
+  deferErrand: "Can reduce outdoor exposure and avoid a separate trip.",
   indoorPlay: "Helps limit strenuous outdoor exertion when outdoor air quality is poor.",
   indoorBreak: "Helps reduce extra time spent outdoors near particle pollution.",
-  checkBefore: "Helps you time flexible outdoor plans around the newest local readings.",
+  checkBefore: "Helps you decide whether to shorten or move optional outdoor activity.",
   workBreak: "Helps keep outdoor breaks flexible when conditions worsen.",
   calmRoute: "Helps lower exposure to heavy roadside vehicle exhaust.",
   exhaust: "Helps vent cooking smoke outdoors before it spreads through the house.",

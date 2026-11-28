@@ -1,7 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { CloudSun, Info } from "lucide-react";
+import { CloudSun } from "lucide-react";
 import { CitySkylineSvg } from "@/components/atmosphere/CitySkylines";
 import type { AtmosphereState } from "@/lib/atmosphere";
 import type { City } from "@/lib/contracts";
@@ -51,9 +51,9 @@ export function AtmosphericBackground({
         />
       </div>
 
-      {/* Foreground interactive search workspace + concise scientific disclosure */}
+      {/* Foreground city label and search controls */}
       <div className="relative z-10 mx-auto w-full max-w-[1380px] px-4 pt-3.5 pb-4 sm:px-6">
-        <div className="mb-3 flex flex-wrap items-center justify-between gap-2 text-xs">
+        <div className="mb-3 text-xs">
           <div className="glass-chrome inline-flex items-center gap-1.5 rounded-md border border-(--glass-border) px-2.5 py-1 font-medium text-foreground shadow-2xs">
             <CloudSun
               className={cn(
@@ -66,11 +66,6 @@ export function AtmosphericBackground({
               {city ? `${city.name} · ${atmosphere.landmarkLabel}` : atmosphere.landmarkLabel}
             </span>
           </div>
-
-          <p className="glass-chrome inline-flex items-center gap-1.5 rounded-md border border-(--glass-border) px-2.5 py-1 text-[11px] leading-snug text-muted-foreground shadow-2xs">
-            <Info className="size-3 shrink-0 text-muted-foreground" aria-hidden="true" />
-            <span>{atmosphere.disclosure}</span>
-          </p>
         </div>
 
         {children}
